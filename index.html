@@ -91,7 +91,7 @@
   @media print{
     body{background:#fff}
     header.bar,main{display:none!important}
-    # print{display:block;padding:0}
+    #print{display:block;padding:0}
     .cmyk{height:6px}
     .p-wrap{padding:28px 34px;font-size:13px;color:#000}
     .p-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #161A20;padding-bottom:14px;margin-bottom:18px}
@@ -286,7 +286,7 @@ let TERM = {};       // terminaciones; las dinámicas traen su config (tubo, reg
 
 async function cargarCatalogo(){
   const [prods, precios, terms, pterms] = await Promise.all([
-    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones").eq("activo", true),
+    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden").eq("activo", true),
     sb.from("producto_precios").select("producto_id,incluye_diseno,precio"),
     sb.from("terminaciones").select("id,nombre,precio,costo,tipo,dinamico,config"),
     sb.from("producto_terminaciones").select("producto_id,terminacion_id")
@@ -305,10 +305,18 @@ async function cargarCatalogo(){
   CATALOGO = {};
   prods.data.forEach(p=>{
     CATALOGO[p.id] = {nombre:p.nombre, material:p.material||"", metodo:p.metodo,
-                      term:p.permite_terminaciones, termIds:[], precio:{con:0,sin:0}, costo:{con:0,sin:0}};
+                      term:p.permite_terminaciones, permiteDiseno:p.permite_diseno!==false,
+                      orden:(p.orden==null?9999:p.orden), termIds:[], precio:{con:0,sin:0}, costo:{con:0,sin:0}};
   });
   precios.data.forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.precio[r.incluye_diseno?"con":"sin"]=Number(r.precio); });
   (costos.data||[]).forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.costo[r.incluye_diseno?"con":"sin"]=Number(r.costo); });
+  // Si un producto trae un solo precio (o costo), se usa para ambos modos (con/sin diseño)
+  for(const k in CATALOGO){ const c=CATALOGO[k];
+    if(!c.precio.sin && c.precio.con) c.precio.sin=c.precio.con;
+    if(!c.precio.con && c.precio.sin) c.precio.con=c.precio.sin;
+    if(!c.costo.sin  && c.costo.con)  c.costo.sin =c.costo.con;
+    if(!c.costo.con  && c.costo.sin)  c.costo.con =c.costo.sin;
+  }
 
   // Qué terminaciones ofrece cada producto (tabla de relación)
   (pterms.data||[]).forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.termIds.push(r.terminacion_id); });
@@ -321,11 +329,11 @@ async function cargarCatalogo(){
                   tipo:t.tipo, dinamico:t.dinamico, config:t.config||{}};
   });
 
-  // Selector de productos: ordenado alfabéticamente
+  // Selector: primero por orden definido (1-19), el resto alfabético
   const sel=$("prodSel");
   sel.innerHTML = '<option value="">Seleccionar producto…</option>';
   Object.entries(CATALOGO)
-    .sort((a,b)=> a[1].nombre.localeCompare(b[1].nombre, "es"))
+    .sort((a,b)=> (a[1].orden - b[1].orden) || a[1].nombre.localeCompare(b[1].nombre, "es"))
     .forEach(([k,p])=>{ const o=document.createElement("option"); o.value=k; o.textContent=p.nombre; sel.appendChild(o); });
 }
 
@@ -394,7 +402,7 @@ function addItem(){
   const k=$("prodSel").value; if(!k) return;
   const p=CATALOGO[k];
   // Nuevo producto arriba: los ya cotizados bajan
-  items.unshift({id:++uid, key:k, diseno:true, ancho:1, alto:1, cant:1, terms:{}});
+  items.unshift({id:++uid, key:k, diseno:false, ancho:1, alto:1, cant:1, terms:{}});
   $("prodSel").value="";
   render();
 }
@@ -489,7 +497,7 @@ function itemHTML(it){
       <div><div class="pname">${p.nombre}</div></div>
       <button class="x" onclick="rmItem(${it.id})" title="Quitar">×</button>
     </div>
-    <label class="switch"><input type="checkbox" ${it.diseno?"checked":""} onchange="upd(${it.id},'diseno',this.checked)"> Incluye diseño <span style="font-weight:400;color:var(--ink-soft)">(${it.diseno?clp(p.precio.con):clp(p.precio.sin)}${p.metodo==="m2"?"/m²":"/u"})</span></label>
+    ${p.permiteDiseno ? `<label class="switch"><input type="checkbox" ${it.diseno?"checked":""} onchange="upd(${it.id},'diseno',this.checked)"> Incluye diseño <span style="font-weight:400;color:var(--ink-soft)">(${it.diseno?clp(p.precio.con):clp(p.precio.sin)}${p.metodo==="m2"?"/m²":"/u"})</span></label>` : ``}
     <div style="margin-top:10px">${dims}</div>
     ${terms}
     <div class="linefoot"><span class="sub" id="sub-${it.id}">${clp(c.subtotal)}</span><span class="mg" id="mg-${it.id}" style="color:${mgColor}">${mgInner}</span></div>
