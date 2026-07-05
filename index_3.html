@@ -1,0 +1,977 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GyG Impresores · Cotizador</title>
+<style>
+  :root{
+    --ink:#161A20; --ink-soft:#3A434F; --line:#D9DEE6; --line-soft:#E9EDF2;
+    --paper:#F1F4F8; --card:#FFFFFF; --accent:#0E6E63; --accent-d:#0A554C;
+    --warn:#B23A2E; --warn-bg:#FBECEA; --ok:#1F7A4D;
+    --c:#00AEEF; --m:#EC008C; --y:#FFF200; --k:#161A20;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.45;-webkit-font-smoothing:antialiased}
+  .cmyk{height:5px;display:flex}
+  .cmyk i{flex:1}
+  .cmyk i:nth-child(1){background:var(--c)}.cmyk i:nth-child(2){background:var(--m)}
+  .cmyk i:nth-child(3){background:var(--y)}.cmyk i:nth-child(4){background:var(--k)}
+  header.bar{background:var(--ink);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+  .brand{display:flex;flex-direction:column;line-height:1.1}
+  .brand b{font-size:17px;letter-spacing:.5px}
+  .brand span{font-size:11px;color:#9AA6B4;text-transform:uppercase;letter-spacing:2px;font-family:var(--mono)}
+  .rolewrap{display:flex;align-items:center;gap:8px;font-size:12px;color:#9AA6B4}
+  .toggle{display:flex;background:#262C36;border-radius:8px;padding:3px}
+  .toggle button{background:none;border:0;color:#9AA6B4;font:inherit;font-size:13px;padding:6px 14px;border-radius:6px;cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#fff;font-weight:600}
+  main{max-width:1080px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+  @media(max-width:860px){main{grid-template-columns:1fr;padding:14px}}
+  .col-build{display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .card>h2{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--ink-soft);font-family:var(--mono);padding:13px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:8px}
+  .card>h2 .n{background:var(--ink);color:#fff;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font-size:11px}
+  .body{padding:16px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+  input,select,textarea{width:100%;font:inherit;font-size:15px;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  textarea{resize:vertical;min-height:54px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .field{margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  .hint{font-size:11px;margin-top:4px;font-family:var(--mono)}
+  .hint.err{color:var(--warn)}.hint.good{color:var(--ok)}
+  .addrow{display:flex;gap:10px}
+  .addrow select{flex:1}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:8px;font:inherit;font-weight:600;font-size:14px;padding:11px 16px;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:var(--accent-d)}
+  .btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .btn.block{width:100%;padding:14px;font-size:15px}
+  .item{border:1px solid var(--line);border-radius:10px;padding:13px;margin-top:12px;position:relative}
+  .item .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+  .item .pname{font-weight:700;font-size:15px}
+  .item .pmeta{font-size:11px;color:var(--ink-soft);font-family:var(--mono)}
+  .x{background:none;border:0;color:var(--ink-soft);font-size:20px;cursor:pointer;line-height:1;padding:0 4px}
+  .x:hover{color:var(--warn)}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;user-select:none}
+  .switch input{width:auto;margin:0}
+  .terms{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .terms .t{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0}
+  .terms .t input[type=checkbox]{width:auto}
+  .terms .t .price{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  .terms .t input.qty{width:62px;padding:5px 7px;font-size:13px}
+  .linefoot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft)}
+  .linefoot .sub{font-family:var(--mono);font-weight:700;font-size:16px}
+  .linefoot .mg{font-family:var(--mono);font-size:12px}
+  .empty{color:var(--ink-soft);font-size:14px;text-align:center;padding:18px 0}
+  /* summary */
+  .col-sum{position:sticky;top:78px}
+  @media(max-width:860px){.col-sum{position:static}}
+  .sum{background:var(--ink);color:#fff;border-radius:12px;overflow:hidden}
+  .sum .cot{font-family:var(--mono);font-size:13px;color:#9AA6B4;padding:13px 16px;border-bottom:1px solid #2A313B;letter-spacing:1px}
+  .sum .rows{padding:14px 16px}
+  .srow{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;font-family:var(--mono)}
+  .srow.muted{color:#9AA6B4}
+  .srow.total{font-size:21px;font-weight:700;border-top:1px solid #2A313B;margin-top:6px;padding-top:12px}
+  .discount{padding:14px 16px;border-top:1px solid #2A313B}
+  .discount label{color:#9AA6B4}
+  .discount .di{display:flex;align-items:center;gap:8px}
+  .discount input{width:90px;background:#262C36;border-color:#3A434F;color:#fff}
+  .margin-box{margin:0 16px 14px;border-radius:9px;padding:11px 13px;font-family:var(--mono);font-size:13px}
+  .margin-box.ok{background:#143A2B;color:#7EE0A8}
+  .margin-box.bad{background:#3A1714;color:#F0A79C}
+  .sum .act{padding:0 16px 16px}
+  .note{font-size:11px;color:#7F8B99;padding:0 16px 14px;font-family:var(--mono);line-height:1.5}
+  /* print */
+  #print{display:none}
+  @media print{
+    body{background:#fff}
+    header.bar,main{display:none!important}
+    #print{display:block;padding:0}
+    .cmyk{height:6px}
+    .p-wrap{padding:28px 34px;font-size:13px;color:#000}
+    .p-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #161A20;padding-bottom:14px;margin-bottom:18px}
+    .p-head .co b{font-size:20px;letter-spacing:.5px}
+    .p-head .co span{display:block;font-size:11px;color:#444}
+    .p-head .meta{text-align:right;font-family:var(--mono);font-size:12px}
+    .p-head .meta b{font-size:15px}
+    .p-sec{margin-bottom:16px}
+    .p-sec h4{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:3px}
+    table.p-items{width:100%;border-collapse:collapse;font-size:12px}
+    table.p-items th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#666;border-bottom:1px solid #161A20;padding:6px 4px}
+    table.p-items td{padding:7px 4px;border-bottom:1px solid #eee;vertical-align:top}
+    table.p-items td.num,table.p-items th.num{text-align:right;font-family:var(--mono)}
+    .p-tot{margin-left:auto;width:50%;margin-top:14px}
+    .p-tot .r{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;padding:4px 0}
+    .p-tot .r.total{font-size:17px;font-weight:700;border-top:2px solid #161A20;margin-top:5px;padding-top:8px}
+    .p-foot{margin-top:26px;font-size:11px;color:#444;border-top:1px solid #ddd;padding-top:10px}
+    /* OT en media hoja de oficio: dos por hoja, línea de corte al medio */
+    .ot-copy{height:152mm;overflow:hidden;padding:6mm 8mm;box-sizing:border-box;page-break-inside:avoid}
+    .ot-copy .p-wrap{padding:4px 6px;font-size:11px}
+    .ot-copy .p-head{padding-bottom:6px;margin-bottom:8px}
+    .ot-copy .p-head .co b{font-size:15px}
+    .ot-copy .p-head .meta{font-size:10px}
+    .ot-copy .p-head .meta b{font-size:13px}
+    .ot-copy .p-sec{margin-bottom:8px}
+    .ot-copy .p-sec h4{margin-bottom:3px;letter-spacing:1px}
+    .ot-copy table.p-items{font-size:10px}
+    .ot-copy table.p-items td{padding:3px 4px}
+    .ot-copy table.p-items th{padding:3px 4px}
+    .ot-copy .p-tot{margin-top:6px;width:55%}
+    .ot-copy .p-tot .r{font-size:11px;padding:2px 0}
+    .ot-copy .p-tot .r.total{font-size:13px;padding-top:4px;margin-top:2px}
+    .ot-copy .p-foot{margin-top:8px;font-size:9px;padding-top:6px}
+    .ot-cut{border-top:1.5px dashed #999;height:0;margin:2mm 0;position:relative}
+    .ot-cut::after{content:"cortar aqui";position:absolute;right:4mm;top:-9px;font-size:8px;color:#999;background:#fff;padding:0 4px}
+  }
+  /* login */
+  #login{position:fixed;inset:0;background:var(--ink);display:grid;place-items:center;z-index:100}
+  .login-card{background:var(--card);border-radius:14px;padding:30px 28px;width:min(380px,92vw)}
+  .login-card h1{font-size:18px;margin-bottom:2px}
+  .login-card .sub{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:2px;font-family:var(--mono);margin-bottom:18px}
+  .login-card .field{margin-bottom:12px}
+  #loginErr{color:var(--warn);font-size:13px;margin-top:10px;min-height:18px}
+  .userchip{display:flex;align-items:center;gap:10px;font-size:12px;color:#9AA6B4}
+  .userchip .pill{background:#262C36;border-radius:6px;padding:5px 10px;font-family:var(--mono);font-size:11px}
+  .userchip .pill b{color:#fff}
+  .userchip button{background:none;border:1px solid #3A434F;color:#9AA6B4;border-radius:6px;font:inherit;font-size:12px;padding:5px 10px;cursor:pointer}
+  .userchip button:hover{color:#fff;border-color:#9AA6B4}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><b>GyG IMPRESORES</b><span>Cotizador en terreno</span></div>
+  <div class="userchip" id="userchip" style="display:none">
+    <span class="pill" id="userInfo"></span>
+    <button onclick="verHistorial()">Historial</button>
+    <button onclick="verOTs()">Órdenes de trabajo</button>
+    <button onclick="salir()">Salir</button>
+  </div>
+</header>
+<div class="cmyk"><i></i><i></i><i></i><i></i></div>
+
+<!-- PANTALLA DE INICIO DE SESIÓN -->
+<div id="login">
+  <div class="login-card">
+    <h1>GyG Impresores</h1>
+    <div class="sub">Cotizador · Iniciar sesión</div>
+    <div class="field"><label>Correo</label><input id="loginEmail" type="email" autocomplete="username" placeholder="tu@correo.cl"></div>
+    <div class="field"><label>Contraseña</label><input id="loginPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
+    <button class="btn block" onclick="entrar()">Entrar</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div id="hist" style="display:none;position:fixed;inset:0;background:rgba(22,26,32,.85);z-index:90;padding:20px;overflow:auto" onclick="if(event.target===this)cerrarHistorial()">
+  <div style="max-width:720px;margin:30px auto;background:var(--card);border-radius:12px;overflow:hidden">
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:2px;font-family:var(--mono);padding:14px 18px;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:center">
+      Historial de cotizaciones
+      <button class="x" onclick="cerrarHistorial()">×</button>
+    </h2>
+    <div id="histBody" style="padding:8px 18px 18px"></div>
+  </div>
+</div>
+
+<main>
+  <div class="col-build">
+    <!-- CLIENTE -->
+    <section class="card">
+      <h2><span class="n">1</span> Cliente</h2>
+      <div class="body">
+        <div class="field"><label>Cliente</label>
+          <select id="cliSel" onchange="seleccionarCliente()">
+            <option value="">— Nuevo cliente —</option>
+          </select>
+        </div>
+        <div class="field"><label>Razón social</label><input id="razon" placeholder="Empresa S.A." oninput="clienteSelId=null; render()"></div>
+        <div class="grid2">
+          <div class="field"><label>Nombre contacto</label><input id="contacto" oninput="render()"></div>
+          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut()"><div id="rutHint" class="hint"></div></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="tel" placeholder="+56 9 ..."></div>
+          <div class="field"><label>Correo</label><input id="correo" type="email" placeholder="cliente@correo.cl"></div>
+        </div>
+        <div class="field"><label>Dirección</label><input id="dir" placeholder="Dirección de despacho"></div>
+        <div class="field"><label>Observaciones del cliente</label><textarea id="obsCli"></textarea></div>
+      </div>
+    </section>
+
+    <!-- PRODUCTOS -->
+    <section class="card">
+      <h2><span class="n">2</span> Productos</h2>
+      <div class="body">
+        <div class="addrow">
+          <select id="prodSel">
+            <option value="">Seleccionar producto…</option>
+          </select>
+          <button class="btn" onclick="addItem()">Agregar</button>
+        </div>
+        <div id="items"></div>
+      </div>
+    </section>
+
+    <!-- COTIZACION -->
+    <section class="card">
+      <h2><span class="n">3</span> Detalles de la cotización</h2>
+      <div class="body">
+        <div class="grid2">
+          <div class="field"><label>Vigencia (días)</label><input id="vig" type="number" value="15" min="1"></div>
+          <div class="field"><label>Despacho</label><input id="despacho" placeholder="1 punto en Santiago"></div>
+        </div>
+        <div class="field"><label>Observaciones de la cotización</label><textarea id="obsCot" placeholder="Plazo de entrega, condiciones de pago…"></textarea></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- RESUMEN -->
+  <div class="col-sum">
+    <div class="sum">
+      <div class="cot" id="cotNum">COT · se asigna al guardar</div>
+      <div class="rows" id="sumRows"></div>
+      <div class="discount">
+        <label>Descuento (%) <span id="discCap"></span></label>
+        <div class="di"><input id="disc" type="number" value="0" min="0" oninput="refreshSummary()"> <span style="font-family:var(--mono);font-size:13px" id="discMonto"></span></div>
+      </div>
+      <div id="marginBox"></div>
+      <div class="act"><button class="btn block" id="btnGuardar" onclick="guardar()">Guardar y generar PDF</button></div>
+      <div class="act" style="margin-top:6px"><button class="btn block" id="btnGuardarOT" onclick="guardarYGenerarOT()" style="background:var(--accent-d)">Guardar y generar OT</button></div>
+      <div class="note" id="footNote"></div>
+    </div>
+  </div>
+</main>
+
+
+<!-- Modal generar OT -->
+<div id="otModal" style="display:none;position:fixed;inset:0;background:rgba(22,26,32,.85);z-index:95;padding:20px;overflow:auto" onclick="if(event.target===this)cerrarOtModal()">
+  <div style="max-width:520px;margin:4vh auto;background:var(--card);border-radius:10px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600">
+      Generar orden de trabajo <span id="otModalCot" style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)"></span>
+      <button class="x" onclick="cerrarOtModal()">×</button>
+    </div>
+    <div style="padding:16px 18px">
+      <div class="grid2">
+        <div class="field"><label>Canal de venta *</label><select id="otCanal"></select></div>
+        <div class="field"><label>Comprobante</label><select id="otComp"><option>Factura</option><option>Boleta</option><option>No aplica</option></select></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Fecha de entrega</label><input id="otFecha" type="date"></div>
+        <div class="field"><label>Hora de entrega</label><input id="otHora" type="time"></div>
+      </div>
+      <div class="field"><label>Pago inicial</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <button type="button" onclick="setAbono(0.5)">Abono 50%</button>
+          <button type="button" onclick="setAbono(0.6)">Abono 60%</button>
+          <button type="button" onclick="setAbono(1)">Pago total</button>
+          <button type="button" onclick="setAbono(0)">Sin pago</button>
+        </div>
+        <div class="grid2">
+          <input id="otAbono" type="number" min="0" placeholder="Monto $">
+          <select id="otMedio"><option value="">Medio de pago…</option><option>Efectivo</option><option>Transferencia</option><option>Débito/Crédito</option></select>
+        </div>
+        <div class="hint" id="otAbonoHint"></div>
+      </div>
+      <div class="field"><label>Observaciones de producción</label><textarea id="otObs" placeholder="Indicaciones para taller, instalación, despacho…"></textarea></div>
+      <div id="otErr" style="color:var(--warn);font-size:13px;margin-bottom:8px"></div>
+      <button class="btn block" id="btnOtGen" onclick="confirmarOT()">Generar OT e imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal lista de OTs -->
+<div id="otList" style="display:none;position:fixed;inset:0;background:rgba(22,26,32,.85);z-index:90;padding:20px;overflow:auto" onclick="if(event.target===this)cerrarOTs()">
+  <div style="max-width:1000px;margin:3vh auto;background:var(--card);border-radius:10px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600">
+      Órdenes de trabajo
+      <button class="x" onclick="cerrarOTs()">×</button>
+    </div>
+    <div id="otListBody" style="padding:8px 18px 18px"></div>
+  </div>
+</div>
+
+<div id="print"></div>
+
+<script>
+/* ============================================================
+   CONEXIÓN A SUPABASE
+   👉 PEGA TU LLAVE en SUPABASE_KEY (la que empieza con sb_publishable_)
+   ============================================================ */
+const SUPABASE_URL = "https://tcruyggneptjmrmjfcqq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_T7rXHTMp3OpOyzm6rYjZcg_3Xz9LKyZ";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------- SESIÓN Y PERFIL ---------- */
+let perfil = null;   // {nombre, rol, descuento_max}
+
+async function entrar(){
+  const err=$("loginErr"); err.textContent="";
+  const email=$("loginEmail").value.trim(), pass=$("loginPass").value;
+  if(!email||!pass){ err.textContent="Ingresa correo y contraseña."; return; }
+  const {error} = await sb.auth.signInWithPassword({email, password:pass});
+  if(error){ err.textContent="Correo o contraseña incorrectos."; return; }
+  await cargarPerfil();
+}
+
+async function salir(){
+  await sb.auth.signOut();
+  perfil=null; role="vendedor";
+  $("login").style.display="grid"; $("userchip").style.display="none";
+}
+
+async function cargarPerfil(){
+  const {data:{user}} = await sb.auth.getUser();
+  if(!user){ $("login").style.display="grid"; return; }
+  const {data, error} = await sb.from("profiles")
+    .select("nombre, rol, descuento_max").eq("id", user.id).single();
+  if(error || !data){
+    $("loginErr").textContent="No se pudo cargar tu perfil. Avisa al administrador.";
+    await sb.auth.signOut(); return;
+  }
+  perfil=data;
+  role = data.rol;                       // el rol viene de la BD, ya no es elegible
+  TOPE_VEND = Number(data.descuento_max); // tope real del usuario
+  $("login").style.display="none";
+  $("userchip").style.display="flex";
+  $("userInfo").innerHTML = `<b>${data.nombre}</b> · ${data.rol}`;
+  await cargarCatalogo();
+  await cargarClientes();
+  render();
+}
+
+// Al abrir: si hay sesión guardada, entra directo; si no, muestra el login
+cargarPerfil();
+
+/* ---------- CATÁLOGO (se carga desde Supabase al iniciar sesión) ---------- */
+let CATALOGO = {};   // productos: precio público; costo solo llega si eres admin (RLS)
+let TERM = {};       // terminaciones; las dinámicas traen su config (tubo, regatones)
+
+async function cargarCatalogo(){
+  const [prods, precios, terms, pterms] = await Promise.all([
+    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden").eq("activo", true),
+    sb.from("producto_precios").select("producto_id,incluye_diseno,precio"),
+    sb.from("terminaciones").select("id,nombre,precio,costo,tipo,dinamico,config"),
+    sb.from("producto_terminaciones").select("producto_id,terminacion_id")
+  ]);
+  if(prods.error || precios.error || terms.error || pterms.error){
+    alert("No se pudo cargar el catálogo. Revisa tu conexión a internet.");
+    return;
+  }
+  // Costos: la base solo se los entrega al admin. Al vendedor ni siquiera le llegan.
+  let costos = {data:[]};
+  if(role === "admin"){
+    costos = await sb.from("producto_costos").select("producto_id,incluye_diseno,costo");
+    if(costos.error) costos = {data:[]};
+  }
+
+  CATALOGO = {};
+  prods.data.forEach(p=>{
+    CATALOGO[p.id] = {nombre:p.nombre, material:p.material||"", metodo:p.metodo,
+                      term:p.permite_terminaciones, permiteDiseno:p.permite_diseno!==false,
+                      orden:(p.orden==null?9999:p.orden), termIds:[], precio:{con:0,sin:0}, costo:{con:0,sin:0}};
+  });
+  precios.data.forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.precio[r.incluye_diseno?"con":"sin"]=Number(r.precio); });
+  (costos.data||[]).forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.costo[r.incluye_diseno?"con":"sin"]=Number(r.costo); });
+  // Si un producto trae un solo precio (o costo), se usa para ambos modos (con/sin diseño)
+  for(const k in CATALOGO){ const c=CATALOGO[k];
+    if(!c.precio.sin && c.precio.con) c.precio.sin=c.precio.con;
+    if(!c.precio.con && c.precio.sin) c.precio.con=c.precio.sin;
+    if(!c.costo.sin  && c.costo.con)  c.costo.sin =c.costo.con;
+    if(!c.costo.con  && c.costo.sin)  c.costo.con =c.costo.sin;
+  }
+
+  // Qué terminaciones ofrece cada producto (tabla de relación)
+  (pterms.data||[]).forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.termIds.push(r.terminacion_id); });
+  // Orden por id: las terminaciones existentes (id menor) primero, las nuevas después
+  for(const k in CATALOGO){ CATALOGO[k].termIds.sort((a,b)=>a-b); }
+
+  TERM = {};
+  terms.data.forEach(t=>{
+    TERM[t.id] = {nombre:t.nombre, precio:Number(t.precio), costo:Number(t.costo),
+                  tipo:t.tipo, dinamico:t.dinamico, config:t.config||{}};
+  });
+
+  // Selector: primero por orden definido (1-19), el resto alfabético
+  const sel=$("prodSel");
+  sel.innerHTML = '<option value="">Seleccionar producto…</option>';
+  Object.entries(CATALOGO)
+    .sort((a,b)=> (a[1].orden - b[1].orden) || a[1].nombre.localeCompare(b[1].nombre, "es"))
+    .forEach(([k,p])=>{ const o=document.createElement("option"); o.value=k; o.textContent=p.nombre; sel.appendChild(o); });
+}
+
+/* ---------- CLIENTES (desplegable de los ya ingresados) ---------- */
+let CLIENTES = [];
+let clienteSelId = null;   // id del cliente elegido en el desplegable (si lo hay)
+
+async function cargarClientes(){
+  const {data, error} = await sb.from("clientes")
+    .select("id,razon_social,nombre_contacto,rut,telefono,correo,direccion")
+    .order("razon_social");
+  CLIENTES = (error || !data) ? [] : data;
+  const sel=$("cliSel");
+  sel.innerHTML = '<option value="">— Nuevo cliente —</option>' +
+    CLIENTES.map(c=>`<option value="${c.id}">${c.razon_social}${c.rut?" · "+c.rut:""}</option>`).join("");
+}
+
+function seleccionarCliente(){
+  const id = $("cliSel").value;
+  if(!id){ clienteSelId=null; return; }
+  const c = CLIENTES.find(x=>String(x.id)===String(id));
+  if(!c) return;
+  clienteSelId = c.id;
+  $("razon").value    = c.razon_social||"";
+  $("contacto").value = c.nombre_contacto||"";
+  $("rut").value      = c.rut||"";  onRut();
+  $("tel").value      = c.telefono||"";
+  $("correo").value   = c.correo||"";
+  $("dir").value      = c.direccion||"";
+  render();
+}
+
+const IVA = 0.19, MARGEN_PISO = 30;
+let TOPE_VEND = 10;  // se sobreescribe con el perfil real al iniciar sesión
+
+/* ---------- ESTADO ---------- */
+let role = "vendedor";
+let items = [];
+let uid = 0;
+let numeroActual = null;   // lo asigna el servidor al guardar
+
+/* ---------- UTIL ---------- */
+const clp = n => "$" + Math.round(n).toLocaleString("es-CL");
+const $ = id => document.getElementById(id);
+const dec = v => { const x=parseFloat(String(v).replace(",",".")); return isNaN(x)?0:x; };
+
+function validaRut(r){
+  r = (r||"").replace(/[.\-\s]/g,"").toUpperCase();
+  if(r.length<2) return false;
+  const dv = r.slice(-1), num = r.slice(0,-1);
+  if(!/^\d+$/.test(num)) return false;
+  let s=1,m=0;
+  for(let i=num.length-1;i>=0;i--){ s=(s+num[i]*(9-m++%6))%11; }
+  const calc = s ? String(s-1) : "K";
+  return calc === dv;
+}
+function onRut(){
+  const v=$("rut").value.trim(); const h=$("rutHint");
+  if(!v){h.textContent="";h.className="hint";return;}
+  if(validaRut(v)){h.textContent="✓ RUT válido";h.className="hint good";}
+  else{h.textContent="✗ RUT inválido (revisa el dígito verificador)";h.className="hint err";}
+}
+
+/* ---------- ITEMS ---------- */
+function addItem(){
+  const k=$("prodSel").value; if(!k) return;
+  const p=CATALOGO[k];
+  // Nuevo producto arriba: los ya cotizados bajan
+  items.unshift({id:++uid, key:k, diseno:false, ancho:1, alto:1, cant:1, terms:{}});
+  $("prodSel").value="";
+  render();
+}
+function rmItem(id){ items=items.filter(i=>i.id!==id); render(); }
+function upd(id,f,v){ const it=items.find(i=>i.id===id); if(it){it[f]=v; render();} }
+function updTerm(id,t,v){ const it=items.find(i=>i.id===id); if(it){it.terms[t]=v; render();} }
+function updNum(id,f,v){ const it=items.find(i=>i.id===id); if(it){it[f]=v; refreshTotals();} }
+function updTermNum(id,t,v){ const it=items.find(i=>i.id===id); if(it){it.terms[t]=v; refreshTotals();} }
+
+/* ---------- MOTOR DE CÁLCULO ---------- */
+function calcItem(it){
+  const p=CATALOGO[it.key];
+  const tier = it.diseno?"con":"sin";
+  const area = p.metodo==="m2" ? dec(it.ancho)*dec(it.alto) : 1;
+  let unitPrint = p.metodo==="m2" ? area*p.precio[tier] : p.precio[tier];
+  let unitCostP = p.metodo==="m2" ? area*p.costo[tier]  : p.costo[tier];
+  let termPrice=0, termCost=0;
+  const anchoCm = (p.metodo==="m2" ? dec(it.ancho) : 0) * 100;
+  if(p.term){
+    (p.termIds||[]).forEach(t=>{
+      const def=TERM[t]; if(!def) return;
+      if(def.tipo==="fija" && it.terms[t]){
+        const cfg = def.config||{};
+        if(cfg.por_m2){
+          // Laminado: por m² con mínimo. Precio = mayor(mínimo, área×precio); costo proporcional.
+          termPrice += Math.max(Number(cfg.minimo)||0, area*def.precio);
+          termCost  += area*def.costo;
+        } else if(def.dinamico){
+          const g=cfg;
+          termPrice += def.precio;
+          termCost  += (g.tubos||2)*anchoCm*(g.tubo_costo_cm||0) + (g.regatones||4)*(g.regaton||0);
+        } else {
+          termPrice += def.precio;
+          termCost  += def.costo;
+        }
+      }
+      if(def.tipo==="unidad"){ const q=Number(it.terms[t])||0; termPrice+=def.precio*q; termCost+=def.costo*q; }
+    });
+  }
+  const cant=Number(it.cant)||0;
+  const unitPrice=unitPrint+termPrice, unitCost=unitCostP+termCost;
+  return {area, cant, unitPrice, unitCost, subtotal:unitPrice*cant, costoTotal:unitCost*cant};
+}
+function totals(){
+  let netoBruto=0, costo=0;
+  items.forEach(it=>{ const c=calcItem(it); netoBruto+=c.subtotal; costo+=c.costoTotal; });
+  let d=Number($("disc").value)||0;
+  if(role==="vendedor") d=Math.min(d,TOPE_VEND);
+  const descMonto=netoBruto*d/100;
+  const neto=netoBruto-descMonto;
+  const iva=neto*IVA, total=neto+iva;
+  const margenP = neto>0 ? (neto-costo)/neto*100 : 0;
+  return {netoBruto,descMonto,neto,iva,total,costo,margenP,d};
+}
+
+/* ---------- RENDER ---------- */
+function itemHTML(it){
+  const p=CATALOGO[it.key], c=calcItem(it);
+  let dims="";
+  if(p.metodo==="m2"){
+    dims=`<div class="grid3">
+      <div class="field"><label>Ancho (m)</label><input type="text" inputmode="decimal" value="${it.ancho}" oninput="updNum(${it.id},'ancho',this.value)"></div>
+      <div class="field"><label>Alto (m)</label><input type="text" inputmode="decimal" value="${it.alto}" oninput="updNum(${it.id},'alto',this.value)"></div>
+      <div class="field"><label>Cantidad</label><input type="text" inputmode="numeric" value="${it.cant}" oninput="updNum(${it.id},'cant',this.value)"></div>
+    </div><div class="pmeta">Área: <span id="area-${it.id}">${c.area.toFixed(2)}</span> m² · Material: ${p.material}</div>`;
+  }else{
+    dims=`<div class="grid2">
+      <div class="field"><label>Cantidad</label><input type="text" inputmode="numeric" value="${it.cant}" oninput="updNum(${it.id},'cant',this.value)"></div>
+      <div></div>
+    </div><div class="pmeta">Por unidad · Material: ${p.material}</div>`;
+  }
+  let terms="";
+  const tids = p.term ? (p.termIds||[]) : [];
+  if(tids.length){
+    terms=`<div class="terms">`;
+    tids.forEach(t=>{
+      const d=TERM[t]; if(!d) return;
+      if(d.tipo==="fija"){
+        const lbl = (d.config&&d.config.por_m2) ? `+${clp(d.precio)}/m²` : `+${clp(d.precio)}`;
+        terms+=`<label class="t"><input type="checkbox" ${it.terms[t]?"checked":""} onchange="updTerm(${it.id},'${t}',this.checked)"> ${d.nombre} <span class="price">${lbl}</span></label>`;
+      }else{
+        terms+=`<div class="t"><span>${d.nombre}</span><input class="qty" type="text" inputmode="numeric" value="${it.terms[t]||0}" oninput="updTermNum(${it.id},'${t}',this.value)"><span class="price">${clp(d.precio)} c/u</span></div>`;
+      }
+    });
+    terms+=`</div>`;
+  }
+  const mpct = c.subtotal>0 ? (c.subtotal-c.costoTotal)/c.subtotal*100 : 0;
+  const mgInner = role==="admin" ? `margen ${mpct.toFixed(1)}%` : "";
+  const mgColor = role==="admin" ? ((c.subtotal>0 && mpct<MARGEN_PISO)?"var(--warn)":"var(--ok)") : "";
+  return `<div class="item">
+    <div class="top">
+      <div><div class="pname">${p.nombre}</div></div>
+      <button class="x" onclick="rmItem(${it.id})" title="Quitar">×</button>
+    </div>
+    ${p.permiteDiseno ? `<label class="switch"><input type="checkbox" ${it.diseno?"checked":""} onchange="upd(${it.id},'diseno',this.checked)"> Incluye diseño <span style="font-weight:400;color:var(--ink-soft)">(${it.diseno?clp(p.precio.con):clp(p.precio.sin)}${p.metodo==="m2"?"/m²":"/u"})</span></label>` : ``}
+    <div style="margin-top:10px">${dims}</div>
+    ${terms}
+    <div class="linefoot"><span class="sub" id="sub-${it.id}">${clp(c.subtotal)}</span><span class="mg" id="mg-${it.id}" style="color:${mgColor}">${mgInner}</span></div>
+  </div>`;
+}
+
+function render(){
+  $("cotNum").textContent = numeroActual || "COT · se asigna al guardar";
+  $("items").innerHTML = items.length ? items.map(itemHTML).join("") : `<div class="empty">Sin productos. Agrega uno arriba.</div>`;
+  $("footNote").innerHTML = role==="admin"
+    ? "Costos y márgenes solo visibles para administrador. Bolsillo+tubo se costea por ancho (tubo + 4 regatones); no incluye mano de obra de armado."
+    : "Correlativo, historial y envío por correo se activan al conectar la base de datos.";
+  refreshSummary();
+}
+
+// Actualiza subtotales y márgenes por línea SIN recrear los inputs (no se pierde el foco al escribir)
+function refreshTotals(){
+  items.forEach(it=>{
+    const c=calcItem(it);
+    const s=document.getElementById("sub-"+it.id); if(s) s.textContent=clp(c.subtotal);
+    const a=document.getElementById("area-"+it.id); if(a) a.textContent=c.area.toFixed(2);
+    const m=document.getElementById("mg-"+it.id);
+    if(m){
+      if(role==="admin"){ const p=c.subtotal>0?(c.subtotal-c.costoTotal)/c.subtotal*100:0;
+        m.style.color=(c.subtotal>0 && p<MARGEN_PISO)?"var(--warn)":"var(--ok)";
+        m.textContent="margen "+p.toFixed(1)+"%";
+      } else m.textContent="";
+    }
+  });
+  refreshSummary();
+}
+
+function refreshSummary(){
+  const t=totals();
+  if(role==="vendedor"){
+    $("disc").max=TOPE_VEND;
+    if(Number($("disc").value)>TOPE_VEND) $("disc").value=TOPE_VEND;
+    $("discCap").textContent="· tope vendedor "+TOPE_VEND+"%";
+  }else{ $("disc").max=100; $("discCap").textContent="· admin sin tope"; }
+  $("discMonto").textContent = t.descMonto>0 ? "− "+clp(t.descMonto) : "";
+
+  $("sumRows").innerHTML =
+    `<div class="srow muted"><span>Neto bruto</span><span>${clp(t.netoBruto)}</span></div>`+
+    (t.descMonto>0?`<div class="srow muted"><span>Descuento ${t.d}%</span><span>− ${clp(t.descMonto)}</span></div>`:"")+
+    `<div class="srow"><span>Neto</span><span>${clp(t.neto)}</span></div>`+
+    `<div class="srow muted"><span>IVA 19%</span><span>${clp(t.iva)}</span></div>`+
+    `<div class="srow total"><span>Total</span><span>${clp(t.total)}</span></div>`;
+
+  const mb=$("marginBox");
+  if(role==="admin"){
+    const bad=t.neto>0 && t.margenP<MARGEN_PISO;
+    mb.className="margin-box "+(bad?"bad":"ok");
+    mb.innerHTML = `Costo total: ${clp(t.costo)} · Margen: ${t.margenP.toFixed(1)}%`+
+      (bad?`<br>⚠ Bajo el piso de ${MARGEN_PISO}%. Revisa precio o descuento.`:"");
+  }else{
+    // El vendedor no recibe costos (RLS), así que no puede calcular margen.
+    // La validación real del piso de margen se hará en el servidor al guardar.
+    mb.className=""; mb.innerHTML="";
+  }
+}
+
+
+/* ---------- GUARDAR EN LA BASE + PDF ---------- */
+async function obtenerClienteId(){
+  // Si eligió un cliente del desplegable y no editó razón social ni RUT, lo reutiliza
+  if(clienteSelId) return clienteSelId;
+  const rut = $("rut").value.trim();
+  // Si hay RUT y el cliente ya existe (entre los que puedes ver), lo reutiliza
+  if(rut){
+    const {data} = await sb.from("clientes").select("id").eq("rut", rut).limit(1);
+    if(data && data.length) return data[0].id;
+  }
+  const {data, error} = await sb.from("clientes").insert({
+    razon_social:    $("razon").value.trim(),
+    nombre_contacto: $("contacto").value.trim() || null,
+    rut:             rut || null,
+    telefono:        $("tel").value.trim() || null,
+    correo:          $("correo").value.trim() || null,
+    direccion:       $("dir").value.trim() || null,
+    observaciones:   $("obsCli").value.trim() || null
+  }).select("id").single();
+  if(error) throw new Error("No se pudo guardar el cliente: " + error.message);
+  return data.id;
+}
+
+async function guardar(){
+  if(!items.length){ alert("Agrega al menos un producto."); return; }
+  if(!$("razon").value.trim()){ alert("Falta la razón social del cliente."); return; }
+  const btn = $("btnGuardar");
+  btn.disabled = true; btn.textContent = "Guardando…";
+  try{
+    const cliente_id = await obtenerClienteId();
+    const payload = {
+      cliente_id,
+      descuento_pct: Number($("disc").value) || 0,
+      vigencia_dias: Number($("vig").value) || 15,
+      observaciones: [
+        $("despacho").value.trim() ? "Despacho: " + $("despacho").value.trim() : "",
+        $("obsCot").value.trim()
+      ].filter(Boolean).join(" · ") || null,
+      items: items.map(it=>{
+        const p = CATALOGO[it.key];
+        const terms = [];
+        if(p.term){
+          (p.termIds||[]).forEach(k=>{
+            const d = TERM[k]; if(!d) return;
+            if(d.tipo === "fija"   && it.terms[k]) terms.push({id:Number(k), cantidad:1});
+            if(d.tipo === "unidad" && (Number(it.terms[k])||0) > 0) terms.push({id:Number(k), cantidad:Number(it.terms[k])});
+          });
+        }
+        return { producto_id: Number(it.key), incluye_diseno: !!it.diseno,
+                 ancho: dec(it.ancho), alto: dec(it.alto),
+                 cantidad: Number(it.cant)||1, terminaciones: terms };
+      })
+    };
+    // La base recalcula, valida tope de descuento y piso de margen, y asigna el correlativo
+    const {data, error} = await sb.rpc("guardar_cotizacion", {p: payload});
+    if(error) throw new Error(error.message);
+    numeroActual = data.numero;
+    $("cotNum").textContent = numeroActual;
+    imprimir();
+    numeroActual = null;   // la próxima cotización recibirá su propio número
+    await cargarClientes(); // refresca el desplegable por si fue un cliente nuevo
+  }catch(e){
+    alert("No se pudo guardar: " + (e.message || e));
+  }finally{
+    btn.disabled = false; btn.textContent = "Guardar y generar PDF";
+  }
+}
+
+/* ---------- HISTORIAL ---------- */
+async function verHistorial(){
+  $("hist").style.display = "block";
+  $("histBody").innerHTML = '<div class="empty">Cargando…</div>';
+  const {data, error} = await sb.from("cotizaciones")
+    .select("numero, fecha, estado, total, clientes(razon_social), ordenes_trabajo(numero)")
+    .order("id", {ascending:false}).limit(50);
+  if(error){ $("histBody").innerHTML = '<div class="empty">No se pudo cargar el historial.</div>'; return; }
+  if(!data.length){ $("histBody").innerHTML = '<div class="empty">Aún no hay cotizaciones guardadas.</div>'; return; }
+  $("histBody").innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+    '<thead><tr>'+
+      '<th style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">N°</th>'+
+      '<th style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">Fecha</th>'+
+      '<th style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">Cliente</th>'+
+      '<th style="text-align:right;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">Total</th>'+
+      '<th style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">Estado</th>'+
+      '<th style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">OT</th>'+
+    '</tr></thead><tbody>'+
+    data.map(c=>'<tr>'+
+      '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft);font-family:var(--mono)">'+c.numero+'</td>'+
+      '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+new Date(c.fecha+"T12:00:00").toLocaleDateString("es-CL")+'</td>'+
+      '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+(c.clientes?c.clientes.razon_social:"—")+'</td>'+
+      '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft);text-align:right;font-family:var(--mono)">'+clp(c.total)+'</td>'+
+      '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+c.estado+'</td>'+
+      '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+
+        (c.ordenes_trabajo && c.ordenes_trabajo.length
+          ? '<button onclick="imprimirOT(\''+c.ordenes_trabajo[0].numero+'\')">'+c.ordenes_trabajo[0].numero+'</button>'
+          : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+')">Generar OT</button>')+
+      '</td>'+
+    '</tr>').join("")+'</tbody></table>';
+}
+function cerrarHistorial(){ $("hist").style.display = "none"; }
+
+/* ---------- PDF (impresión) ---------- */
+function imprimir(){
+  const t=totals();
+  const fecha=new Date().toLocaleDateString("es-CL");
+  const rows=items.map(it=>{
+    const p=CATALOGO[it.key], c=calcItem(it);
+    let desc=p.nombre+(it.diseno?" · con diseño":" · sin diseño");
+    if(p.metodo==="m2") desc+=` · ${it.ancho}×${it.alto} m (${c.area.toFixed(2)} m²)`;
+    const tl=[]; if(p.term){ (p.termIds||[]).forEach(k=>{ const d=TERM[k]; if(!d) return; if(d.tipo==="fija"&&it.terms[k])tl.push(d.nombre); if(d.tipo==="unidad"&&Number(it.terms[k])>0)tl.push(`${it.terms[k]} ${d.nombre}`);}); }
+    if(tl.length) desc+=" · "+tl.join(", ");
+    return `<tr><td>${desc}</td><td class="num">${c.cant}</td><td class="num">${clp(c.unitPrice)}</td><td class="num">${clp(c.subtotal)}</td></tr>`;
+  }).join("");
+
+  $("print").innerHTML=`
+    <div class="cmyk"><i></i><i></i><i></i><i></i></div>
+    <div class="p-wrap">
+      <div class="p-head">
+        <div class="co"><b>GyG IMPRESORES</b><span>Soluciones gráficas y publicidad visual</span><span>Santiago de Chile</span></div>
+        <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días</div>
+      </div>
+      <div class="p-sec"><h4>Cliente</h4>
+        <b>${$("razon").value||"—"}</b><br>
+        ${$("contacto").value?"Contacto: "+$("contacto").value+"<br>":""}
+        ${$("rut").value?"RUT: "+$("rut").value+"<br>":""}
+        ${$("tel").value?"Tel: "+$("tel").value+" · ":""}${$("correo").value||""}<br>
+        ${$("dir").value?"Dirección: "+$("dir").value:""}
+      </div>
+      <div class="p-sec"><h4>Detalle</h4>
+        <table class="p-items"><thead><tr><th>Descripción</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Subtotal</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>
+      <div class="p-tot">
+        ${t.descMonto>0?`<div class="r"><span>Neto bruto</span><span>${clp(t.netoBruto)}</span></div><div class="r"><span>Descuento ${t.d}%</span><span>− ${clp(t.descMonto)}</span></div>`:""}
+        <div class="r"><span>Neto</span><span>${clp(t.neto)}</span></div>
+        <div class="r"><span>IVA 19%</span><span>${clp(t.iva)}</span></div>
+        <div class="r total"><span>Total</span><span>${clp(t.total)}</span></div>
+      </div>
+      <div class="p-foot">
+        ${$("despacho").value?"<b>Despacho:</b> "+$("despacho").value+"<br>":""}
+        ${$("obsCot").value?"<b>Observaciones:</b> "+$("obsCot").value+"<br>":""}
+        Valores en pesos chilenos. Precios netos + IVA. Cotización válida por ${$("vig").value||15} días desde la fecha de emisión.
+      </div>
+    </div>`;
+  const _pt1 = document.title;
+  document.title = (numeroActual + " - " + ($("razon").value||"cliente")).replace(/[\/\\:*?"<>|]/g,"-");
+  window.print();
+  document.title = _pt1;
+}
+
+
+/* ---------- ÓRDENES DE TRABAJO ---------- */
+let otCotNum = null, otCotTotal = 0, CANALES = [];
+
+async function cargarCanales(){
+  if(CANALES.length) return;
+  const {data} = await sb.from("canales_venta").select("codigo,nombre").eq("activo",true).order("codigo");
+  CANALES = data || [];
+}
+
+async function abrirOtModal(cotNumero, total){
+  otCotNum = cotNumero; otCotTotal = Number(total)||0;
+  await cargarCanales();
+  $("otCanal").innerHTML = '<option value="">Seleccionar canal…</option>' +
+    CANALES.map(c=>`<option value="${c.codigo}">${c.codigo} · ${c.nombre}</option>`).join("");
+  $("otModalCot").textContent = cotNumero + " · " + clp(otCotTotal);
+  $("otAbono").value = ""; $("otMedio").value = ""; $("otObs").value = "";
+  $("otFecha").value = ""; $("otHora").value = ""; $("otErr").textContent = "";
+  $("otAbonoHint").textContent = "Total de la cotización: " + clp(otCotTotal);
+  $("otModal").style.display = "block";
+}
+function cerrarOtModal(){ $("otModal").style.display = "none"; otCotNum = null; }
+function setAbono(f){ $("otAbono").value = Math.round(otCotTotal*f); }
+
+async function confirmarOT(){
+  const canal = $("otCanal").value;
+  if(!canal){ $("otErr").textContent = "Elige el canal de venta."; return; }
+  const abono = Number($("otAbono").value)||0;
+  if(abono > otCotTotal){ $("otErr").textContent = "El abono supera el total."; return; }
+  const btn = $("btnOtGen"); btn.disabled = true; btn.textContent = "Generando…";
+  try{
+    const {data, error} = await sb.rpc("generar_ot", {p:{
+      cotizacion_numero: otCotNum, canal_codigo: Number(canal),
+      fecha_entrega: $("otFecha").value || "", hora_entrega: $("otHora").value || "",
+      comprobante: $("otComp").value, abono_monto: abono,
+      abono_medio: $("otMedio").value, observaciones: $("otObs").value.trim()
+    }});
+    if(error) throw new Error(error.message);
+    cerrarOtModal();
+    await imprimirOT(data.numero);
+  }catch(e){
+    $("otErr").textContent = e.message || e;
+  }finally{
+    btn.disabled = false; btn.textContent = "Generar OT e imprimir";
+  }
+}
+
+async function guardarYGenerarOT(){
+  if(!items.length){ alert("Agrega al menos un producto."); return; }
+  if(!$("razon").value.trim()){ alert("Falta la razón social del cliente."); return; }
+  const btn = $("btnGuardarOT"); btn.disabled = true; btn.textContent = "Guardando…";
+  try{
+    const cliente_id = await obtenerClienteId();
+    const payload = {
+      cliente_id,
+      descuento_pct: Number($("disc").value) || 0,
+      vigencia_dias: Number($("vig").value) || 15,
+      observaciones: [
+        $("despacho").value.trim() ? "Despacho: " + $("despacho").value.trim() : "",
+        $("obsCot").value.trim()
+      ].filter(Boolean).join(" · ") || null,
+      items: items.map(it=>{
+        const p = CATALOGO[it.key];
+        const terms = [];
+        if(p.term){
+          (p.termIds||[]).forEach(k=>{
+            const d = TERM[k]; if(!d) return;
+            if(d.tipo === "fija"   && it.terms[k]) terms.push({id:Number(k), cantidad:1});
+            if(d.tipo === "unidad" && (Number(it.terms[k])||0) > 0) terms.push({id:Number(k), cantidad:Number(it.terms[k])});
+          });
+        }
+        return { producto_id: Number(it.key), incluye_diseno: !!it.diseno,
+                 ancho: dec(it.ancho), alto: dec(it.alto),
+                 cantidad: Number(it.cant)||1, terminaciones: terms };
+      })
+    };
+    const {data, error} = await sb.rpc("guardar_cotizacion", {p: payload});
+    if(error) throw new Error(error.message);
+    await cargarClientes();
+    const t = totals();
+    await abrirOtModal(data.numero, t.total);
+  }catch(e){
+    alert("No se pudo guardar: " + (e.message || e));
+  }finally{
+    btn.disabled = false; btn.textContent = "Guardar y generar OT";
+  }
+}
+
+async function verOTs(){
+  $("otList").style.display = "block";
+  $("otListBody").innerHTML = '<div class="empty">Cargando…</div>';
+  const {data, error} = await sb.from("v_ot_resumen")
+    .select("*").order("id", {ascending:false}).limit(80);
+  if(error){ $("otListBody").innerHTML = '<div class="empty">No se pudo cargar. ¿Corriste el SQL de OT?</div>'; return; }
+  if(!data.length){ $("otListBody").innerHTML = '<div class="empty">Aún no hay órdenes de trabajo.</div>'; return; }
+  const est = ["pendiente","produccion","terminada","entregada","anulada"];
+  const th = 'style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase"';
+  const td = 'style="padding:8px 4px;border-bottom:1px solid var(--line-soft)"';
+  $("otListBody").innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'+
+    `<th ${th}>N°</th><th ${th}>Cliente</th><th ${th}>Canal</th><th ${th}>Entrega</th>`+
+    `<th ${th} style="text-align:right">Total</th><th ${th} style="text-align:right">Saldo</th>`+
+    `<th ${th}>Estado</th><th ${th}></th>`+
+    '</tr></thead><tbody>'+
+    data.map(o=>{
+      const ent = o.fecha_entrega ? new Date(o.fecha_entrega+"T12:00:00").toLocaleDateString("es-CL") : "—";
+      const saldoCol = Number(o.saldo)>0 ? "var(--warn)" : "var(--ok)";
+      return `<tr>
+        <td ${td} style="font-family:var(--mono)">${o.numero}</td>
+        <td ${td}>${o.razon_social||"—"}</td>
+        <td ${td}>${o.canal}</td>
+        <td ${td}>${ent}${o.hora_entrega?" "+String(o.hora_entrega).slice(0,5):""}</td>
+        <td ${td} style="text-align:right;font-family:var(--mono)">${clp(o.total)}</td>
+        <td ${td} style="text-align:right;font-family:var(--mono);color:${saldoCol}">${clp(o.saldo)}</td>
+        <td ${td}><select onchange="cambiarEstadoOT('${o.numero}',this.value)" style="padding:4px 6px">${est.map(e=>`<option ${e===o.estado?"selected":""}>${e}</option>`).join("")}</select></td>
+        <td ${td} style="white-space:nowrap">
+          <button onclick="imprimirOT('${o.numero}')">Imprimir</button>
+          ${Number(o.saldo)>0?`<button onclick="pagarOT('${o.numero}',${o.saldo})">Pago</button>`:""}
+        </td></tr>`;
+    }).join("")+'</tbody></table>';
+}
+function cerrarOTs(){ $("otList").style.display = "none"; }
+
+async function cambiarEstadoOT(numero, estado){
+  const {error} = await sb.rpc("cambiar_estado_ot", {p:{ot_numero:numero, estado}});
+  if(error){ alert("No se pudo cambiar el estado: "+error.message); verOTs(); }
+}
+
+async function pagarOT(numero, saldo){
+  const m = prompt(`Registrar pago para ${numero}\nSaldo pendiente: ${clp(saldo)}\n\nMonto a pagar:`, Math.round(saldo));
+  if(m===null) return;
+  const monto = Number(m)||0;
+  if(monto<=0){ alert("Monto inválido."); return; }
+  const medio = prompt("Medio de pago (Efectivo / Transferencia / Débito/Crédito):","") || "";
+  const {error} = await sb.rpc("registrar_pago_ot", {p:{ot_numero:numero, monto, medio}});
+  if(error){ alert("No se pudo registrar: "+error.message); return; }
+  verOTs();
+}
+
+async function imprimirOT(numero){
+  const {data, error} = await sb.rpc("detalle_ot", {p:{ot_numero:numero}});
+  if(error || !data){ alert("No se pudo cargar la OT."); return; }
+  const d = data;
+  const rows = (d.items||[]).map(i=>{
+    let desc = i.descripcion;
+    if(i.m2) desc += ` · ${i.ancho}×${i.alto} m (${Number(i.m2).toFixed(2)} m²)`;
+    desc += i.incluye_diseno ? " · con diseño" : " · sin diseño";
+    const tl = (i.terminaciones||[]).map(t=> (t.cantidad>1? t.cantidad+" ":"") + (t.nombre||"")).filter(Boolean);
+    if(tl.length) desc += " · " + tl.join(", ");
+    return `<tr><td>${desc}</td><td class="num">${i.cantidad}</td><td class="num">${clp(i.subtotal)}</td></tr>`;
+  }).join("");
+  const otHTML = `
+    <div class="ot-copy">
+    <div class="cmyk"><i></i><i></i><i></i><i></i></div>
+    <div class="p-wrap">
+      <div class="p-head">
+        <div class="co"><b>GyG IMPRESORES</b><span>Orden de Trabajo</span><span>Santiago de Chile</span></div>
+        <div class="meta"><b>${d.numero}</b><br>Pedido: ${d.fecha_pedido}<br>
+          <b>Entrega: ${d.fecha_entrega||"por definir"}${d.hora_entrega?" · "+d.hora_entrega:""}</b><br>
+          Canal: ${d.canal} · ${d.comprobante}</div>
+      </div>
+      <div class="p-sec"><h4>Cliente</h4>
+        <b>${d.cliente.razon_social||"—"}</b><br>
+        ${d.cliente.rut?"RUT: "+d.cliente.rut+"<br>":""}
+        ${d.cliente.contacto?"Contacto: "+d.cliente.contacto+"<br>":""}
+        ${d.cliente.telefono?"Tel: "+d.cliente.telefono+" · ":""}${d.cliente.correo||""}<br>
+        ${d.cliente.direccion?"Dirección: "+d.cliente.direccion:""}
+      </div>
+      <div class="p-sec"><h4>Detalle del pedido</h4>
+        <table class="p-items"><thead><tr><th>Descripción</th><th class="num">Cant.</th><th class="num">Subtotal</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>
+      <div class="p-tot">
+        <div class="r"><span>Neto</span><span>${clp(d.neto)}</span></div>
+        <div class="r"><span>IVA 19%</span><span>${clp(d.iva)}</span></div>
+        <div class="r total"><span>Total</span><span>${clp(d.total)}</span></div>
+        <div class="r"><span>Cancelado</span><span>${clp(d.pagado)}</span></div>
+        <div class="r total"><span>SALDO</span><span>${clp(d.saldo)}</span></div>
+      </div>
+      <div class="p-foot">
+        ${d.observaciones?"<b>Observaciones:</b> "+d.observaciones+"<br>":""}
+        Cotización de origen: ${d.cotizacion}${d.vendedor?" · Vendedor: "+d.vendedor:""}<br><br>
+        Recibí conforme: ______________________________ &nbsp;&nbsp; Fecha: ____/____/______
+      </div>
+    </div>
+    </div>`;
+  $("print").innerHTML = otHTML + '<div class="ot-cut"></div>' + otHTML;
+  const _pt2 = document.title;
+  document.title = ("OT " + d.numero + " - " + (d.cliente.razon_social||"cliente")).replace(/[\/\\:*?"<>|]/g,"-");
+  window.print();
+  document.title = _pt2;
+}
+
+
+render();
+</script>
+</body>
+</html>
