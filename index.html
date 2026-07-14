@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -91,6 +90,8 @@
   @media print{
     body{background:#fff}
     header.bar,main{display:none!important}
+    /* A5: los modales abiertos NO deben salir en el PDF */
+    #hist,#otList,#otModal,#pagoModal,#login{display:none!important}
     #print{display:block;padding:0}
     .cmyk{height:6px}
     .p-wrap{padding:28px 34px;font-size:13px;color:#000}
@@ -109,6 +110,9 @@
     .p-tot .r{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;padding:4px 0}
     .p-tot .r.total{font-size:17px;font-weight:700;border-top:2px solid #161A20;margin-top:5px;padding-top:8px}
     .p-foot{margin-top:26px;font-size:11px;color:#444;border-top:1px solid #ddd;padding-top:10px}
+    .p-pago{margin-top:14px;border:1px solid #161A20;padding:8px 10px;font-size:11px}
+    .p-pago-t{font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:10px;margin-bottom:3px}
+    .p-contacto{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;color:#333;border-top:1px solid #ddd;padding-top:8px}
     /* OT en media hoja de oficio: dos por hoja, línea de corte al medio */
     .ot-copy{height:152mm;overflow:hidden;padding:6mm 8mm;box-sizing:border-box;page-break-inside:avoid}
     .ot-copy .p-wrap{padding:4px 6px;font-size:11px}
@@ -184,10 +188,11 @@
     <section class="card">
       <h2><span class="n">1</span> Cliente</h2>
       <div class="body">
-        <div class="field"><label>Cliente</label>
-          <select id="cliSel" onchange="seleccionarCliente()">
-            <option value="">— Nuevo cliente —</option>
-          </select>
+        <div class="field" style="position:relative"><label>Cliente</label>
+          <input id="cliBuscar" autocomplete="off" placeholder="Escribe para buscar… (o deja vacío para cliente nuevo)"
+                 oninput="filtrarClientes()" onfocus="filtrarClientes()">
+          <div id="cliLista" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35)"></div>
+          <div id="cliHint" class="hint"></div>
         </div>
         <div class="field"><label>Razón social</label><input id="razon" placeholder="Empresa S.A." oninput="clienteSelId=null; render()"></div>
         <div class="grid2">
@@ -292,6 +297,39 @@
       <button class="x" onclick="cerrarOTs()">×</button>
     </div>
     <div id="otListBody" style="padding:8px 18px 18px"></div>
+  </div>
+</div>
+
+<!-- A7 · Modal de pagos (reemplaza los prompt del navegador) -->
+<div id="pagoModal" style="display:none;position:fixed;inset:0;background:rgba(22,26,32,.85);z-index:96;padding:20px;overflow:auto" onclick="if(event.target===this)cerrarPagoModal()">
+  <div style="max-width:520px;margin:5vh auto;background:var(--card);border-radius:10px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600">
+      Pagos <span id="pagoTitulo" style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)"></span>
+      <button class="x" onclick="cerrarPagoModal()">×</button>
+    </div>
+    <div style="padding:16px 18px">
+      <div id="pagoBody"></div>
+      <div id="pagoForm" style="margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px">
+        <div class="field"><label>Registrar nuevo pago</label>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <button type="button" onclick="setPagoTotal()">Pagar saldo total</button>
+          </div>
+          <div class="grid2">
+            <input id="pagoMonto" type="number" min="0" placeholder="Monto $">
+            <select id="pagoMedio">
+              <option value="">Medio de pago…</option>
+              <option>Efectivo</option>
+              <option>Transferencia</option>
+              <option>Débito/Crédito</option>
+            </select>
+          </div>
+          <div class="hint" id="pagoHint"></div>
+        </div>
+        <div id="pagoErr" style="color:var(--warn);font-size:13px;margin-bottom:6px"></div>
+        <div id="pagoOk"  style="color:var(--ok);font-size:13px;margin-bottom:6px"></div>
+        <button class="btn block" id="btnPago" onclick="confirmarPago()">Registrar pago</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -414,17 +452,44 @@ async function cargarClientes(){
     .select("id,razon_social,nombre_contacto,rut,telefono,correo,direccion")
     .order("razon_social");
   CLIENTES = (error || !data) ? [] : data;
-  const sel=$("cliSel");
-  sel.innerHTML = '<option value="">— Nuevo cliente —</option>' +
-    CLIENTES.map(c=>`<option value="${c.id}">${c.razon_social}${c.rut?" · "+c.rut:""}</option>`).join("");
+  $("cliHint").textContent = CLIENTES.length + " clientes en la base";
 }
 
-function seleccionarCliente(){
-  const id = $("cliSel").value;
-  if(!id){ clienteSelId=null; return; }
+/* A1 — Combobox con buscador: mismo comportamiento en PC y móvil.
+   Filtra por razón social, RUT o nombre de contacto. Sin resultados = cliente nuevo. */
+const _norm = s => (s||"").toString().toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[.\-\s]/g,"");
+
+function filtrarClientes(){
+  const q = _norm($("cliBuscar").value);
+  const box = $("cliLista");
+  if(!q){ box.style.display="none"; clienteSelId=null; return; }
+  const hits = CLIENTES.filter(c =>
+    _norm(c.razon_social).includes(q) ||
+    _norm(c.rut).includes(q) ||
+    _norm(c.nombre_contacto).includes(q)
+  ).slice(0, 50);
+  if(!hits.length){
+    box.innerHTML = '<div style="padding:10px 12px;color:var(--ink-soft);font-size:13px">Sin coincidencias · se creará como cliente nuevo</div>';
+    box.style.display = "block";
+    clienteSelId = null;
+    return;
+  }
+  box.innerHTML = hits.map(c=>
+    `<div onclick="seleccionarCliente(${c.id})" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line-soft);font-size:14px"
+          onmouseover="this.style.background='var(--line-soft)'" onmouseout="this.style.background=''">
+       <b>${c.razon_social||"—"}</b>${c.rut?` <span style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">· ${c.rut}</span>`:""}
+       ${c.nombre_contacto?`<div style="font-size:12px;color:var(--ink-soft)">${c.nombre_contacto}</div>`:""}
+     </div>`).join("");
+  box.style.display = "block";
+}
+
+function seleccionarCliente(id){
   const c = CLIENTES.find(x=>String(x.id)===String(id));
+  $("cliLista").style.display = "none";
   if(!c) return;
   clienteSelId = c.id;
+  $("cliBuscar").value = (c.razon_social||"") + (c.rut?" · "+c.rut:"");
   $("razon").value    = c.razon_social||"";
   $("contacto").value = c.nombre_contacto||"";
   $("rut").value      = c.rut||"";  onRut();
@@ -434,8 +499,48 @@ function seleccionarCliente(){
   render();
 }
 
+/* Cierra la lista al hacer clic fuera */
+document.addEventListener("click", e=>{
+  if(!e.target.closest("#cliBuscar") && !e.target.closest("#cliLista")){
+    const b=$("cliLista"); if(b) b.style.display="none";
+  }
+});
+
 const IVA = 0.19, MARGEN_PISO = 30;
 let TOPE_VEND = 10;  // se sobreescribe con el perfil real al iniciar sesión
+
+/* A3 — Datos fijos de la empresa (editar aquí si cambian) */
+const EMPRESA = {
+  direccion: "Santa Rosa 2224, Santiago Centro",
+  wsp:       "+56 9 8595 6685",
+  fono:      "22 544 02 35",
+  correo:    "g.gimpresores@gmail.com",
+  rrss:      "gyg.impresores",
+  titular:   "Luis Gutiérrez Solar",
+  rut:       "13.250.007-K",
+  cuenta:    "0213324553"
+};
+
+/* A9 — Estados de la OT: clave en BD → etiqueta visible
+   Flujo: pendiente info cliente → diseño → impresión → tai
+          → entregada a venta → entregada a cliente   (tai = terminación/armado/instalación) */
+const ESTADOS_OT = {
+  pendiente_info:    "Pendiente info cliente",
+  diseno:            "Diseño",
+  impresion:         "Impresión",
+  tai:               "TAI (term./armado/instal.)",
+  entregada_venta:   "Entregada a venta",
+  entregada_cliente: "Entregada a cliente",
+  anulada:           "Anulada"
+};
+
+/* A2 — Nombre del PDF: GyG-COTI-2026-0066-SantaRosa / GyG-OT-10012-SantaRosa */
+function nombreArchivo(tipo, numero, canal){
+  const num = String(numero||"").replace(/^COT-/,"").replace(/^OT-/,"");
+  const can = (canal||"").toString().replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
+  return ["GyG", tipo, num, can].filter(Boolean).join("-")
+         .replace(/[\/\\:*?"<>|]/g,"-");
+}
 
 /* ---------- ESTADO ---------- */
 let role = "vendedor";
@@ -735,7 +840,7 @@ function imprimir(){
   const fecha=new Date().toLocaleDateString("es-CL");
   const rows=items.map(it=>{
     const p=CATALOGO[it.key], c=calcItem(it);
-    let desc=p.nombre+(it.diseno?" · con diseño":" · sin diseño");
+    let desc=p.nombre;   // A8: se elimina el sufijo "· con/sin diseño" (el diseño es un ítem propio)
     if(p.metodo==="m2") desc+=` · ${it.ancho}×${it.alto} m (${c.area.toFixed(2)} m²)`;
     const tl=[]; if(p.term){ (p.termIds||[]).forEach(k=>{ const d=TERM[k]; if(!d) return; if(d.tipo==="fija"&&it.terms[k])tl.push(d.nombre); if(d.tipo==="unidad"&&Number(it.terms[k])>0)tl.push(`${it.terms[k]} ${d.nombre}`);}); }
     if(tl.length) desc+=" · "+tl.join(", ");
@@ -746,8 +851,13 @@ function imprimir(){
     <div class="cmyk"><i></i><i></i><i></i><i></i></div>
     <div class="p-wrap">
       <div class="p-head">
-        <div class="co"><b>GyG IMPRESORES</b><span>Soluciones gráficas y publicidad visual</span><span>Santiago de Chile</span></div>
-        <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días</div>
+        <div class="co"><b>GyG IMPRESORES</b>
+          <span>Soluciones gráficas y publicidad visual</span>
+          <span>${EMPRESA.direccion}</span>
+          <span>WhatsApp ${EMPRESA.wsp} · Fono ${EMPRESA.fono}</span>
+        </div>
+        <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
+          Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
       </div>
       <div class="p-sec"><h4>Cliente</h4>
         <b>${$("razon").value||"—"}</b><br>
@@ -769,11 +879,29 @@ function imprimir(){
       <div class="p-foot">
         ${$("despacho").value?"<b>Despacho:</b> "+$("despacho").value+"<br>":""}
         ${$("obsCot").value?"<b>Observaciones:</b> "+$("obsCot").value+"<br>":""}
-        Valores en pesos chilenos. Precios netos + IVA. Cotización válida por ${$("vig").value||15} días desde la fecha de emisión.
+      </div>
+      <div class="p-pago">
+        <div class="p-pago-t">Detalle para pagos · Banco Itaú</div>
+        <div>${EMPRESA.titular} · RUT: ${EMPRESA.rut} · Cta. Corriente: ${EMPRESA.cuenta} · ${EMPRESA.correo}</div>
+      </div>
+      <div class="p-contacto">
+        <div>
+          <b>Información de contacto</b><br>
+          Teléfono: ${EMPRESA.fono} · WhatsApp: ${EMPRESA.wsp}<br>
+          Correo: ${EMPRESA.correo} · Instagram: ${EMPRESA.rrss}<br>
+          ${EMPRESA.direccion}
+        </div>
+        <div style="text-align:right">
+          <b>${(perfil&&perfil.nombre)||""}</b><br>
+          <span style="font-size:10px;color:#666">Ejecutivo/a de ventas</span>
+        </div>
       </div>
     </div>`;
+  // A2: nombre del archivo → GyG-COTI-2026-0066-SantaRosa.pdf
+  // A5: cerrar modales abiertos antes de imprimir
+  cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   const _pt1 = document.title;
-  document.title = (numeroActual + " - " + ($("razon").value||"cliente")).replace(/[\/\\:*?"<>|]/g,"-");
+  document.title = nombreArchivo("COTI", numeroActual);
   window.print();
   document.title = _pt1;
 }
@@ -873,7 +1001,8 @@ async function verOTs(){
     .select("*").order("id", {ascending:false}).limit(80);
   if(error){ $("otListBody").innerHTML = '<div class="empty">No se pudo cargar. ¿Corriste el SQL de OT?</div>'; return; }
   if(!data.length){ $("otListBody").innerHTML = '<div class="empty">Aún no hay órdenes de trabajo.</div>'; return; }
-  const est = ["pendiente","produccion","terminada","entregada","anulada"];
+  // A9: estados reales del flujo (clave BD → etiqueta visible)
+  const est = Object.entries(ESTADOS_OT);
   const th = 'style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase"';
   const td = 'style="padding:8px 4px;border-bottom:1px solid var(--line-soft)"';
   $("otListBody").innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'+
@@ -891,10 +1020,10 @@ async function verOTs(){
         <td ${td}>${ent}${o.hora_entrega?" "+String(o.hora_entrega).slice(0,5):""}</td>
         <td ${td} style="text-align:right;font-family:var(--mono)">${clp(o.total)}</td>
         <td ${td} style="text-align:right;font-family:var(--mono);color:${saldoCol}">${clp(o.saldo)}</td>
-        <td ${td}><select onchange="cambiarEstadoOT('${o.numero}',this.value)" style="padding:4px 6px">${est.map(e=>`<option ${e===o.estado?"selected":""}>${e}</option>`).join("")}</select></td>
+        <td ${td}><select onchange="cambiarEstadoOT('${o.numero}',this.value)" style="padding:4px 6px">${est.map(([k,lbl])=>`<option value="${k}" ${k===o.estado?"selected":""}>${lbl}</option>`).join("")}</select></td>
         <td ${td} style="white-space:nowrap">
           <button onclick="imprimirOT('${o.numero}')">Imprimir</button>
-          ${Number(o.saldo)>0?`<button onclick="pagarOT('${o.numero}',${o.saldo})">Pago</button>`:""}
+          <button onclick="abrirPagoModal('${o.numero}')">${Number(o.saldo)>0?"Pago":"Pagos"}</button>
         </td></tr>`;
     }).join("")+'</tbody></table>';
 }
@@ -905,15 +1034,89 @@ async function cambiarEstadoOT(numero, estado){
   if(error){ alert("No se pudo cambiar el estado: "+error.message); verOTs(); }
 }
 
-async function pagarOT(numero, saldo){
-  const m = prompt(`Registrar pago para ${numero}\nSaldo pendiente: ${clp(saldo)}\n\nMonto a pagar:`, Math.round(saldo));
-  if(m===null) return;
-  const monto = Number(m)||0;
-  if(monto<=0){ alert("Monto inválido."); return; }
-  const medio = prompt("Medio de pago (Efectivo / Transferencia / Débito/Crédito):","") || "";
-  const {error} = await sb.rpc("registrar_pago_ot", {p:{ot_numero:numero, monto, medio}});
-  if(error){ alert("No se pudo registrar: "+error.message); return; }
-  verOTs();
+/* ---------- A7 · PAGOS (modal propio; reemplaza los prompt() del navegador) ---------- */
+let pagoOtNum = null, pagoSaldo = 0;
+
+async function abrirPagoModal(numero){
+  pagoOtNum = numero;
+  $("pagoModal").style.display = "block";
+  $("pagoErr").textContent = "";
+  $("pagoOk").textContent  = "";
+  $("pagoMonto").value = "";
+  $("pagoMedio").value = "";
+  $("pagoTitulo").textContent = "OT " + numero;
+  $("pagoBody").innerHTML = '<div class="empty">Cargando…</div>';
+  await refrescarPagos();
+}
+function cerrarPagoModal(){
+  $("pagoModal").style.display = "none";
+  pagoOtNum = null;
+  verOTs();   // refresca la lista con el saldo actualizado
+}
+
+async function refrescarPagos(){
+  const {data, error} = await sb.rpc("detalle_ot", {p:{ot_numero: pagoOtNum}});
+  if(error || !data){ $("pagoBody").innerHTML = '<div class="empty">No se pudo cargar la OT.</div>'; return; }
+  const d = data;
+  pagoSaldo = Number(d.saldo)||0;
+  const pagos = d.pagos || [];
+  const esAdmin = (role === "admin");
+
+  const filas = pagos.length
+    ? pagos.map(p=>`<tr>
+        <td style="padding:6px 4px;border-bottom:1px solid var(--line-soft);font-size:12px">${p.fecha}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid var(--line-soft);font-size:12px">${p.medio}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid var(--line-soft);text-align:right;font-family:var(--mono)">${clp(p.monto)}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid var(--line-soft);text-align:right">
+          ${esAdmin?`<button onclick="anularPago(${p.id})" style="color:var(--warn)">Anular</button>`:""}
+        </td></tr>`).join("")
+    : '<tr><td colspan="4" style="padding:10px 4px;color:var(--ink-soft);font-size:13px">Sin pagos registrados.</td></tr>';
+
+  $("pagoBody").innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;margin-bottom:10px">
+      <span>Total: <b>${clp(d.total)}</b>${d.sin_iva?' <span style="color:var(--warn);font-size:11px">(sin IVA · No aplica)</span>':""}</span>
+      <span>Pagado: <b>${clp(d.pagado)}</b></span>
+      <span style="color:${pagoSaldo>0?"var(--warn)":"var(--ok)"}">Saldo: <b>${clp(pagoSaldo)}</b></span>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);padding:4px">Fecha</th>
+        <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);padding:4px">Medio</th>
+        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);padding:4px">Monto</th>
+        <th></th>
+      </tr></thead><tbody>${filas}</tbody>
+    </table>`;
+
+  // Si no hay saldo, se oculta el formulario de pago nuevo
+  $("pagoForm").style.display = pagoSaldo > 0 ? "block" : "none";
+  if(pagoSaldo > 0) $("pagoHint").textContent = "Saldo pendiente: " + clp(pagoSaldo);
+}
+
+function setPagoTotal(){ $("pagoMonto").value = Math.round(pagoSaldo); }
+
+async function confirmarPago(){
+  $("pagoErr").textContent = ""; $("pagoOk").textContent = "";
+  const monto = Number($("pagoMonto").value)||0;
+  if(monto <= 0){ $("pagoErr").textContent = "Ingresa un monto mayor a 0."; return; }
+  if(monto > pagoSaldo){ $("pagoErr").textContent = "El monto supera el saldo (" + clp(pagoSaldo) + ")."; return; }
+  const medio = $("pagoMedio").value;
+  if(!medio){ $("pagoErr").textContent = "Selecciona el medio de pago."; return; }
+
+  const btn = $("btnPago"); btn.disabled = true; btn.textContent = "Registrando…";
+  const {error} = await sb.rpc("registrar_pago_ot", {p:{ot_numero: pagoOtNum, monto, medio}});
+  btn.disabled = false; btn.textContent = "Registrar pago";
+  if(error){ $("pagoErr").textContent = "No se pudo registrar: " + error.message; return; }
+  $("pagoOk").textContent = "Pago de " + clp(monto) + " registrado.";
+  $("pagoMonto").value = ""; $("pagoMedio").value = "";
+  await refrescarPagos();
+}
+
+async function anularPago(pagoId){
+  if(!confirm("¿Anular este pago? La acción queda registrada y el saldo vuelve a subir.")) return;
+  const {error} = await sb.rpc("anular_pago_ot", {p:{pago_id: pagoId}});
+  if(error){ $("pagoErr").textContent = "No se pudo anular: " + error.message; return; }
+  $("pagoOk").textContent = "Pago anulado.";
+  await refrescarPagos();
 }
 
 async function imprimirOT(numero){
@@ -923,7 +1126,7 @@ async function imprimirOT(numero){
   const rows = (d.items||[]).map(i=>{
     let desc = i.descripcion;
     if(i.m2) desc += ` · ${i.ancho}×${i.alto} m (${Number(i.m2).toFixed(2)} m²)`;
-    desc += i.incluye_diseno ? " · con diseño" : " · sin diseño";
+    // A8: sin sufijo de diseño (el diseño es un ítem propio del catálogo)
     const tl = (i.terminaciones||[]).map(t=> (t.cantidad>1? t.cantidad+" ":"") + (t.nombre||"")).filter(Boolean);
     if(tl.length) desc += " · " + tl.join(", ");
     return `<tr><td>${desc}</td><td class="num">${i.cantidad}</td><td class="num">${clp(i.subtotal)}</td></tr>`;
@@ -951,7 +1154,7 @@ async function imprimirOT(numero){
       </div>
       <div class="p-tot">
         <div class="r"><span>Neto</span><span>${clp(d.neto)}</span></div>
-        <div class="r"><span>IVA 19%</span><span>${clp(d.iva)}</span></div>
+        ${d.sin_iva ? "" : `<div class="r"><span>IVA 19%</span><span>${clp(d.iva)}</span></div>`}
         <div class="r total"><span>Total</span><span>${clp(d.total)}</span></div>
         <div class="r"><span>Cancelado</span><span>${clp(d.pagado)}</span></div>
         <div class="r total"><span>SALDO</span><span>${clp(d.saldo)}</span></div>
@@ -964,8 +1167,11 @@ async function imprimirOT(numero){
     </div>
     </div>`;
   $("print").innerHTML = otHTML + '<div class="ot-cut"></div>' + otHTML;
+  // A5: cerrar cualquier modal abierto antes de imprimir (si no, salen en el PDF)
+  cerrarHistorial(); cerrarOTs(); cerrarOtModal();
+  // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
   const _pt2 = document.title;
-  document.title = ("OT " + d.numero + " - " + (d.cliente.razon_social||"cliente")).replace(/[\/\\:*?"<>|]/g,"-");
+  document.title = nombreArchivo("OT", d.numero, d.canal);
   window.print();
   document.title = _pt2;
 }
