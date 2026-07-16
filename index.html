@@ -178,6 +178,7 @@
       Historial de cotizaciones
       <button class="x" onclick="cerrarHistorial()">×</button>
     </h2>
+    <div style="padding:0 18px 8px"><input id="histBuscar" placeholder="Buscar por N° o cliente…" oninput="filtrarHist()" style="width:100%"></div>
     <div id="histBody" style="padding:8px 18px 18px"></div>
   </div>
 </div>
@@ -296,6 +297,7 @@
       Órdenes de trabajo
       <button class="x" onclick="cerrarOTs()">×</button>
     </div>
+    <div style="padding:0 18px 8px"><input id="otBuscar" placeholder="Buscar por N° de OT o cliente…" oninput="filtrarOTs()" style="width:100%"></div>
     <div id="otListBody" style="padding:8px 18px 18px"></div>
   </div>
 </div>
@@ -535,10 +537,13 @@ const ESTADOS_OT = {
 };
 
 /* A2 — Nombre del PDF: GyG-COTI-2026-0066-SantaRosa / GyG-OT-10012-SantaRosa */
-function nombreArchivo(tipo, numero, canal){
+function nombreArchivo(tipo, numero, canal, cliente){
   const num = String(numero||"").replace(/^COT-/,"").replace(/^OT-/,"");
   const can = (canal||"").toString().replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
-  return ["GyG", tipo, num, can].filter(Boolean).join("-")
+  // B1: primer nombre del cliente para identificar rápido en el listado
+  const cli = (cliente||"").toString().trim().split(/\s+/)[0]
+                .replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
+  return ["GyG", tipo, num, can, cli].filter(Boolean).join("-")
          .replace(/[\/\\:*?"<>|]/g,"-");
 }
 
@@ -794,6 +799,7 @@ async function guardar(){
     imprimir();
     numeroActual = null;   // la próxima cotización recibirá su propio número
     await cargarClientes(); // refresca el desplegable por si fue un cliente nuevo
+    limpiarFormulario();   // B6: vuelve todo a 0 para la siguiente cotización
   }catch(e){
     alert("No se pudo guardar: " + (e.message || e));
   }finally{
@@ -801,15 +807,43 @@ async function guardar(){
   }
 }
 
+
+/* B6 — Limpiar todo el formulario tras guardar (deja el cotizador en 0) */
+function limpiarFormulario(){
+  items = [];
+  clienteSelId = null;
+  ["cliBuscar","razon","contacto","rut","tel","correo","dir","obsCliente",
+   "despacho","obsCot"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
+  const disc=$("disc"); if(disc) disc.value = 0;      // descuento vuelve a 0
+  const vig=$("vig");   if(vig)  vig.value  = 15;
+  const rh=$("rutHint"); if(rh) rh.textContent="";
+  const cl=$("cliLista"); if(cl) cl.style.display="none";
+  render();
+}
+
 /* ---------- HISTORIAL ---------- */
+let HIST_CACHE = [];
 async function verHistorial(){
   $("hist").style.display = "block";
+  $("histBuscar").value = "";
   $("histBody").innerHTML = '<div class="empty">Cargando…</div>';
   const {data, error} = await sb.from("cotizaciones")
     .select("numero, fecha, estado, total, clientes(razon_social), ordenes_trabajo(numero)")
-    .order("id", {ascending:false}).limit(50);
+    .order("id", {ascending:false}).limit(200);
   if(error){ $("histBody").innerHTML = '<div class="empty">No se pudo cargar el historial.</div>'; return; }
   if(!data.length){ $("histBody").innerHTML = '<div class="empty">Aún no hay cotizaciones guardadas.</div>'; return; }
+  HIST_CACHE = data;
+  pintarHist(data);
+}
+function filtrarHist(){
+  const q = $("histBuscar").value.toLowerCase().trim();
+  const f = !q ? HIST_CACHE : HIST_CACHE.filter(c =>
+    (c.numero||"").toLowerCase().includes(q) ||
+    (c.clientes && c.clientes.razon_social || "").toLowerCase().includes(q));
+  pintarHist(f);
+}
+function pintarHist(data){
+  if(!data.length){ $("histBody").innerHTML = '<div class="empty">Sin coincidencias.</div>'; return; }
   $("histBody").innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
     '<thead><tr>'+
       '<th style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase">N°</th>'+
@@ -828,7 +862,7 @@ async function verHistorial(){
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+
         (c.ordenes_trabajo && c.ordenes_trabajo.length
           ? '<button onclick="imprimirOT(\''+c.ordenes_trabajo[0].numero+'\')">'+c.ordenes_trabajo[0].numero+'</button>'
-          : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+')">Generar OT</button>')+
+          : '<span style="color:var(--ink-soft)">—</span>')+
       '</td>'+
     '</tr>').join("")+'</tbody></table>';
 }
@@ -901,7 +935,7 @@ function imprimir(){
   // A5: cerrar modales abiertos antes de imprimir
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   const _pt1 = document.title;
-  document.title = nombreArchivo("COTI", numeroActual);
+  document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value);
   window.print();
   document.title = _pt1;
 }
@@ -994,13 +1028,27 @@ async function guardarYGenerarOT(){
   }
 }
 
+let OT_CACHE = [];
 async function verOTs(){
   $("otList").style.display = "block";
+  $("otBuscar").value = "";
   $("otListBody").innerHTML = '<div class="empty">Cargando…</div>';
   const {data, error} = await sb.from("v_ot_resumen")
-    .select("*").order("id", {ascending:false}).limit(80);
+    .select("*").order("id", {ascending:false}).limit(200);
   if(error){ $("otListBody").innerHTML = '<div class="empty">No se pudo cargar. ¿Corriste el SQL de OT?</div>'; return; }
   if(!data.length){ $("otListBody").innerHTML = '<div class="empty">Aún no hay órdenes de trabajo.</div>'; return; }
+  OT_CACHE = data;
+  pintarOTs(data);
+}
+function filtrarOTs(){
+  const q = $("otBuscar").value.toLowerCase().trim();
+  const f = !q ? OT_CACHE : OT_CACHE.filter(o =>
+    (o.numero||"").toString().toLowerCase().includes(q) ||
+    (o.razon_social||"").toLowerCase().includes(q));
+  pintarOTs(f);
+}
+function pintarOTs(data){
+  if(!data.length){ $("otListBody").innerHTML = '<div class="empty">Sin coincidencias.</div>'; return; }
   // A9: estados reales del flujo (clave BD → etiqueta visible)
   const est = Object.entries(ESTADOS_OT);
   const th = 'style="text-align:left;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;text-transform:uppercase"';
@@ -1171,7 +1219,7 @@ async function imprimirOT(numero){
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
   const _pt2 = document.title;
-  document.title = nombreArchivo("OT", d.numero, d.canal);
+  document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social);
   window.print();
   document.title = _pt2;
 }
