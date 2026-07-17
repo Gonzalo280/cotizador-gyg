@@ -195,16 +195,16 @@
           <div id="cliLista" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35)"></div>
           <div id="cliHint" class="hint"></div>
         </div>
-        <div class="field"><label>Razón social</label><input id="razon" placeholder="Empresa S.A." oninput="clienteSelId=null; render()"></div>
+        <div class="field"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="clienteSelId=null; render()"></div>
         <div class="grid2">
-          <div class="field"><label>Nombre contacto</label><input id="contacto" oninput="render()"></div>
-          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut()"><div id="rutHint" class="hint"></div></div>
+          <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="render()"></div>
+          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut()"><div id="rutHint" class="hint"></div></div>
         </div>
         <div class="grid2">
-          <div class="field"><label>Teléfono</label><input id="tel" placeholder="+56 9 ..."></div>
-          <div class="field"><label>Correo</label><input id="correo" type="email" placeholder="cliente@correo.cl"></div>
+          <div class="field"><label>Teléfono</label><input id="tel" autocomplete="off" placeholder="+56 9 ..."></div>
+          <div class="field"><label>Correo</label><input id="correo" autocomplete="off" type="email" placeholder="cliente@correo.cl"></div>
         </div>
-        <div class="field"><label>Dirección</label><input id="dir" placeholder="Dirección de despacho"></div>
+        <div class="field"><label>Dirección</label><input id="dir" autocomplete="off" placeholder="Dirección de despacho"></div>
         <div class="field"><label>Observaciones del cliente</label><textarea id="obsCli"></textarea></div>
       </div>
     </section>
@@ -382,7 +382,7 @@ async function cargarPerfil(){
   $("userInfo").innerHTML = `<b>${data.nombre}</b> · ${data.rol}`;
   await cargarCatalogo();
   await cargarClientes();
-  render();
+  limpiarFormulario();   // B6: arrancar siempre con el formulario limpio
 }
 
 // Al abrir: si hay sesión guardada, entra directo; si no, muestra el login
@@ -520,7 +520,8 @@ const EMPRESA = {
   rrss:      "gyg.impresores",
   titular:   "Luis Gutiérrez Solar",
   rut:       "13.250.007-K",
-  cuenta:    "0213324553"
+  cuenta:    "0213324553",
+  membrete:  "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular · DTF Textil · Gráfica Adhesiva · Letreros y más"
 };
 
 /* A9 — Estados de la OT: clave en BD → etiqueta visible
@@ -887,8 +888,7 @@ function imprimir(){
       <div class="p-head">
         <div class="co"><b>GyG IMPRESORES</b>
           <span>Soluciones gráficas y publicidad visual</span>
-          <span>${EMPRESA.direccion}</span>
-          <span>WhatsApp ${EMPRESA.wsp} · Fono ${EMPRESA.fono}</span>
+          <span>${EMPRESA.membrete}</span>
         </div>
         <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
           Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
@@ -923,7 +923,7 @@ function imprimir(){
           <b>Información de contacto</b><br>
           Teléfono: ${EMPRESA.fono} · WhatsApp: ${EMPRESA.wsp}<br>
           Correo: ${EMPRESA.correo} · Instagram: ${EMPRESA.rrss}<br>
-          ${EMPRESA.direccion}
+          ${EMPRESA.direccion} · A pasos Metro Biobío
         </div>
         <div style="text-align:right">
           <b>${(perfil&&perfil.nombre)||""}</b><br>
@@ -934,10 +934,10 @@ function imprimir(){
   // A2: nombre del archivo → GyG-COTI-2026-0066-SantaRosa.pdf
   // A5: cerrar modales abiertos antes de imprimir
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
-  const _pt1 = document.title;
   document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value);
   window.print();
-  document.title = _pt1;
+  // C1: restaurar el título con retardo para que el diálogo "Guardar como PDF" lo tome
+  setTimeout(()=>{ document.title = "GyG Impresores · Cotizador"; }, 1500);
 }
 
 
@@ -1185,7 +1185,7 @@ async function imprimirOT(numero){
     <div class="p-wrap">
       <div class="p-head">
         <div class="co"><b>GyG IMPRESORES</b><span>Orden de Trabajo</span><span>Santiago de Chile</span></div>
-        <div class="meta"><b>${d.numero}</b><br>Pedido: ${d.fecha_pedido}<br>
+        <div class="meta"><b>OT: ${d.numero}</b><br>Pedido: ${d.fecha_pedido}<br>
           <b>Entrega: ${d.fecha_entrega||"por definir"}${d.hora_entrega?" · "+d.hora_entrega:""}</b><br>
           Canal: ${d.canal} · ${d.comprobante}</div>
       </div>
@@ -1218,10 +1218,10 @@ async function imprimirOT(numero){
   // A5: cerrar cualquier modal abierto antes de imprimir (si no, salen en el PDF)
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
-  const _pt2 = document.title;
   document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social);
   window.print();
-  document.title = _pt2;
+  // C1: restaurar el título con retardo para que el diálogo lo tome
+  setTimeout(()=>{ document.title = "GyG Impresores · Cotizador"; }, 1500);
 }
 
 
