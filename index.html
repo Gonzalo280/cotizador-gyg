@@ -863,7 +863,7 @@ function pintarHist(data){
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+
         (c.ordenes_trabajo && c.ordenes_trabajo.length
           ? '<button onclick="imprimirOT(\''+c.ordenes_trabajo[0].numero+'\')">'+c.ordenes_trabajo[0].numero+'</button>'
-          : '<span style="color:var(--ink-soft)">—</span>')+
+          : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+')">Generar OT</button>')+
       '</td>'+
     '</tr>').join("")+'</tbody></table>';
 }
@@ -934,10 +934,10 @@ function imprimir(){
   // A2: nombre del archivo → GyG-COTI-2026-0066-SantaRosa.pdf
   // A5: cerrar modales abiertos antes de imprimir
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
-  // C1: fijar el título ANTES de imprimir y NO tocarlo después.
-  // (restaurarlo mientras el diálogo está abierto invalida el nombre sugerido)
+  // C1: fijar el título y dar 200ms para que la pestaña lo actualice
+  // antes de abrir el diálogo (evita la condición de carrera del nombre vacío)
   document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value);
-  window.print();
+  setTimeout(()=>{ window.print(); }, 200);
 }
 
 
@@ -1219,9 +1219,9 @@ async function imprimirOT(numero){
   // A5: cerrar cualquier modal abierto antes de imprimir (si no, salen en el PDF)
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
-  // C1: fijar el título ANTES de imprimir y NO tocarlo después.
+  // C1: fijar el título y dar 200ms antes de abrir el diálogo
   document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social);
-  window.print();
+  setTimeout(()=>{ window.print(); }, 200);
 }
 
 
