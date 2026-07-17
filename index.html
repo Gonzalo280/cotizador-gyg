@@ -262,6 +262,11 @@
       <button class="x" onclick="cerrarOtModal()">×</button>
     </div>
     <div style="padding:16px 18px">
+      <div id="otYaExiste" style="display:none;text-align:center;padding:10px 0">
+        <div style="color:var(--warn);font-weight:600;margin-bottom:10px" id="otYaExisteTxt"></div>
+        <button class="btn" id="btnOtImprimir">Imprimir esa OT</button>
+      </div>
+      <div id="otFormulario">
       <div class="grid2">
         <div class="field"><label>Canal de venta *</label><select id="otCanal"></select></div>
         <div class="field"><label>Comprobante</label><select id="otComp"><option>Factura</option><option>Boleta</option><option>No aplica</option></select></div>
@@ -286,6 +291,7 @@
       <div class="field"><label>Observaciones de producción</label><textarea id="otObs" placeholder="Indicaciones para taller, instalación, despacho…"></textarea></div>
       <div id="otErr" style="color:var(--warn);font-size:13px;margin-bottom:8px"></div>
       <button class="btn block" id="btnOtGen" onclick="confirmarOT()">Generar OT e imprimir</button>
+      </div><!-- /otFormulario -->
     </div>
   </div>
 </div>
@@ -394,7 +400,7 @@ let TERM = {};       // terminaciones; las dinámicas traen su config (tubo, reg
 
 async function cargarCatalogo(){
   const [prods, precios, terms, pterms] = await Promise.all([
-    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden").eq("activo", true),
+    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden,config").eq("activo", true),
     sb.from("producto_precios").select("producto_id,incluye_diseno,precio"),
     sb.from("terminaciones").select("id,nombre,precio,costo,tipo,dinamico,config"),
     sb.from("producto_terminaciones").select("producto_id,terminacion_id")
@@ -414,6 +420,7 @@ async function cargarCatalogo(){
   prods.data.forEach(p=>{
     CATALOGO[p.id] = {nombre:p.nombre, material:p.material||"", metodo:p.metodo,
                       term:p.permite_terminaciones, permiteDiseno:p.permite_diseno!==false,
+                      minimo:Number((p.config||{}).minimo)||0,   // V4: mínimo comercial por ítem
                       orden:(p.orden==null?9999:p.orden), termIds:[], precio:{con:0,sin:0}, costo:{con:0,sin:0}};
   });
   precios.data.forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.precio[r.incluye_diseno?"con":"sin"]=Number(r.precio); });
@@ -581,7 +588,7 @@ function addItem(){
   const k=$("prodSel").value; if(!k) return;
   const p=CATALOGO[k];
   // Nuevo producto arriba: los ya cotizados bajan
-  items.unshift({id:++uid, key:k, diseno:false, ancho:1, alto:1, cant:1, terms:{}});
+  items.unshift({id:++uid, key:k, diseno:false, ancho:1, alto:1, cant:1, terms:{}, detalle:""});
   $("prodSel").value="";
   render();
 }
@@ -597,6 +604,8 @@ function calcItem(it){
   const tier = it.diseno?"con":"sin";
   const area = p.metodo==="m2" ? dec(it.ancho)*dec(it.alto) : 1;
   let unitPrint = p.metodo==="m2" ? area*p.precio[tier] : p.precio[tier];
+  // V4: mínimo comercial por producto (igual que el motor)
+  if(p.metodo==="m2" && p.minimo>0 && unitPrint<p.minimo) unitPrint = p.minimo;
   let unitCostP = p.metodo==="m2" ? area*p.costo[tier]  : p.costo[tier];
   let termPrice=0, termCost=0;
   const anchoCm = (p.metodo==="m2" ? dec(it.ancho) : 0) * 100;
@@ -646,12 +655,16 @@ function itemHTML(it){
       <div class="field"><label>Ancho (m)</label><input type="text" inputmode="decimal" value="${it.ancho}" oninput="updNum(${it.id},'ancho',this.value)"></div>
       <div class="field"><label>Alto (m)</label><input type="text" inputmode="decimal" value="${it.alto}" oninput="updNum(${it.id},'alto',this.value)"></div>
       <div class="field"><label>Cantidad</label><input type="text" inputmode="numeric" value="${it.cant}" oninput="updNum(${it.id},'cant',this.value)"></div>
-    </div><div class="pmeta">Área: <span id="area-${it.id}">${c.area.toFixed(2)}</span> m² · Material: ${p.material}</div>`;
+    </div><div class="pmeta">Área: <span id="area-${it.id}">${c.area.toFixed(2)}</span> m² · Material: ${p.material}${p.minimo>0?` · Mínimo por ítem: ${clp(p.minimo)}`:""}</div>
+    <div class="field"><label>Descripción corta (opcional, sale en cotización y OT)</label>
+      <input type="text" maxlength="120" value="${(it.detalle||"").replace(/"/g,"&quot;")}" placeholder="Ej: EMPANADAS, SOPAIPILLAS…" oninput="updNum(${it.id},'detalle',this.value)"></div>`;
   }else{
     dims=`<div class="grid2">
       <div class="field"><label>Cantidad</label><input type="text" inputmode="numeric" value="${it.cant}" oninput="updNum(${it.id},'cant',this.value)"></div>
       <div></div>
-    </div><div class="pmeta">Por unidad · Material: ${p.material}</div>`;
+    </div><div class="pmeta">Por unidad · Material: ${p.material}</div>
+    <div class="field"><label>Descripción corta (opcional, sale en cotización y OT)</label>
+      <input type="text" maxlength="120" value="${(it.detalle||"").replace(/"/g,"&quot;")}" placeholder="Ej: EMPANADAS, SOPAIPILLAS…" oninput="updNum(${it.id},'detalle',this.value)"></div>`;
   }
   let terms="";
   const tids = p.term ? (p.termIds||[]) : [];
@@ -789,7 +802,8 @@ async function guardar(){
         }
         return { producto_id: Number(it.key), incluye_diseno: !!it.diseno,
                  ancho: dec(it.ancho), alto: dec(it.alto),
-                 cantidad: Number(it.cant)||1, terminaciones: terms };
+                 cantidad: Number(it.cant)||1, terminaciones: terms,
+                 detalle: (it.detalle||"").trim() };
       })
     };
     // La base recalcula, valida tope de descuento y piso de margen, y asigna el correlativo
@@ -875,7 +889,8 @@ function imprimir(){
   const fecha=new Date().toLocaleDateString("es-CL");
   const rows=items.map(it=>{
     const p=CATALOGO[it.key], c=calcItem(it);
-    let desc=p.nombre;   // A8: se elimina el sufijo "· con/sin diseño" (el diseño es un ítem propio)
+    let desc=p.nombre;   // A8: sin sufijo de diseño
+    if((it.detalle||"").trim()) desc += " · " + it.detalle.trim();   // V4: descripción corta
     if(p.metodo==="m2") desc+=` · ${it.ancho}×${it.alto} m (${c.area.toFixed(2)} m²)`;
     const tl=[]; if(p.term){ (p.termIds||[]).forEach(k=>{ const d=TERM[k]; if(!d) return; if(d.tipo==="fija"&&it.terms[k])tl.push(d.nombre); if(d.tipo==="unidad"&&Number(it.terms[k])>0)tl.push(`${it.terms[k]} ${d.nombre}`);}); }
     if(tl.length) desc+=" · "+tl.join(", ");
@@ -959,6 +974,19 @@ async function abrirOtModal(cotNumero, total){
   $("otAbono").value = ""; $("otMedio").value = ""; $("otObs").value = "";
   $("otFecha").value = ""; $("otHora").value = ""; $("otErr").textContent = "";
   $("otAbonoHint").textContent = "Total de la cotización: " + clp(otCotTotal);
+
+  // Pre-chequeo: si la cotización YA tiene OT, mostrar aviso en vez del formulario
+  $("otYaExiste").style.display = "none";
+  $("otFormulario").style.display = "block";
+  const {data: otex} = await sb.from("v_ot_resumen")
+    .select("numero").eq("cotizacion_numero", cotNumero).limit(1);
+  if(otex && otex.length){
+    const n = otex[0].numero;
+    $("otYaExisteTxt").textContent = "Esta cotización ya tiene la OT " + n + ".";
+    $("btnOtImprimir").onclick = ()=>{ cerrarOtModal(); imprimirOT(n); };
+    $("otYaExiste").style.display = "block";
+    $("otFormulario").style.display = "none";
+  }
   $("otModal").style.display = "block";
 }
 function cerrarOtModal(){ $("otModal").style.display = "none"; otCotNum = null; }
@@ -1013,7 +1041,8 @@ async function guardarYGenerarOT(){
         }
         return { producto_id: Number(it.key), incluye_diseno: !!it.diseno,
                  ancho: dec(it.ancho), alto: dec(it.alto),
-                 cantidad: Number(it.cant)||1, terminaciones: terms };
+                 cantidad: Number(it.cant)||1, terminaciones: terms,
+                 detalle: (it.detalle||"").trim() };
       })
     };
     const {data, error} = await sb.rpc("guardar_cotizacion", {p: payload});
@@ -1072,7 +1101,7 @@ function pintarOTs(data){
         <td ${td}><select onchange="cambiarEstadoOT('${o.numero}',this.value)" style="padding:4px 6px">${est.map(([k,lbl])=>`<option value="${k}" ${k===o.estado?"selected":""}>${lbl}</option>`).join("")}</select></td>
         <td ${td} style="white-space:nowrap">
           <button onclick="imprimirOT('${o.numero}')">Imprimir</button>
-          <button onclick="abrirPagoModal('${o.numero}')">${Number(o.saldo)>0?"Pago":"Pagos"}</button>
+          <button onclick="abrirPagoModal('${o.numero}')">${Number(o.saldo)>0?"P. Pagar":"Cancelada"}</button>
         </td></tr>`;
     }).join("")+'</tbody></table>';
 }
