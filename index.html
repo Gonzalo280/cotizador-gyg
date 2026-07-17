@@ -934,10 +934,10 @@ function imprimir(){
   // A2: nombre del archivo → GyG-COTI-2026-0066-SantaRosa.pdf
   // A5: cerrar modales abiertos antes de imprimir
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
+  // C1: fijar el título ANTES de imprimir y NO tocarlo después.
+  // (restaurarlo mientras el diálogo está abierto invalida el nombre sugerido)
   document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value);
   window.print();
-  // C1: restaurar el título con retardo para que el diálogo "Guardar como PDF" lo tome
-  setTimeout(()=>{ document.title = "GyG Impresores · Cotizador"; }, 1500);
 }
 
 
@@ -1021,6 +1021,7 @@ async function guardarYGenerarOT(){
     await cargarClientes();
     const t = totals();
     await abrirOtModal(data.numero, t.total);
+    limpiarFormulario();   // B6: el modal ya tiene numero y total; el form queda listo
   }catch(e){
     alert("No se pudo guardar: " + (e.message || e));
   }finally{
@@ -1218,10 +1219,9 @@ async function imprimirOT(numero){
   // A5: cerrar cualquier modal abierto antes de imprimir (si no, salen en el PDF)
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
+  // C1: fijar el título ANTES de imprimir y NO tocarlo después.
   document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social);
   window.print();
-  // C1: restaurar el título con retardo para que el diálogo lo tome
-  setTimeout(()=>{ document.title = "GyG Impresores · Cotizador"; }, 1500);
 }
 
 
