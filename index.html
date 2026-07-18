@@ -195,9 +195,9 @@
           <div id="cliLista" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35)"></div>
           <div id="cliHint" class="hint"></div>
         </div>
-        <div class="field"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="clienteSelId=null; render()"></div>
+        <div class="field"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="capInput(this); clienteSelId=null; render()"></div>
         <div class="grid2">
-          <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="render()"></div>
+          <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="capInput(this); render()"></div>
           <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut()"><div id="rutHint" class="hint"></div></div>
         </div>
         <div class="grid2">
@@ -550,7 +550,7 @@ let TOPE_VEND = 10;  // se sobreescribe con el perfil real al iniciar sesión
 const EMPRESAS = {
   GYG: {
     nombre:    "GyG IMPRESORES",
-    rutHeader: "",
+    rutHeader: "RUT 13.250.007-K",
     direccion: "Santa Rosa 2224, Santiago Centro",
     wsp:       "+56 9 8595 6685",
     fono:      "22 544 02 35",
@@ -560,7 +560,8 @@ const EMPRESAS = {
     titular:   "Luis Gutiérrez Solar",
     rut:       "13.250.007-K",
     cuenta:    "0213324553",
-    membrete:  "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular · DTF Textil · Gráfica Adhesiva · Letreros y más"
+    membrete1: "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular",
+    membrete2: "DTF Textil · Gráfica Adhesiva · Letreros y más"
   },
   GDG: {
     nombre:    "GRUPO DIGITAL GRÁFICO SpA",
@@ -574,10 +575,21 @@ const EMPRESAS = {
     titular:   "Grupo Digital Gráfico SpA",
     rut:       "76.677.433-4",
     cuenta:    "52230210",
-    membrete:  "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular · DTF Textil · Gráfica Adhesiva · Letreros y más"
+    membrete1: "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular",
+    membrete2: "DTF Textil · Gráfica Adhesiva · Letreros y más"
   }
 };
 function empresaSel(){ return EMPRESAS[($("empCot")&&$("empCot").value)||"GYG"] || EMPRESAS.GYG; }
+/* Nombres propios con inicial mayúscula (respeta lo demás tal cual) */
+function capNombre(t){
+  return (t||"").split(/\s+/).map(w => w ? w.charAt(0).toUpperCase()+w.slice(1) : w).join(" ");
+}
+/* Capitaliza el contenido de un input mientras se escribe, sin saltar el cursor */
+function capInput(el){
+  const pos = el.selectionStart;
+  const v = el.value.replace(/(^|\s)([a-záéíóúñü])/g, (m,sep,ch)=> sep + ch.toUpperCase());
+  if(v !== el.value){ el.value = v; el.setSelectionRange(pos, pos); }
+}
 
 /* A9 — Estados de la OT: clave en BD → etiqueta visible
    Flujo: pendiente info cliente → diseño → impresión → tai
@@ -967,14 +979,15 @@ function imprimir(){
         <div class="co"><b>${empresaSel().nombre}</b>
           ${empresaSel().rutHeader?`<span>${empresaSel().rutHeader}</span>`:""}
           <span>Soluciones gráficas y publicidad visual</span>
-          <span>${empresaSel().membrete}</span>
+          <span>${empresaSel().membrete1}</span>
+          <span>${empresaSel().membrete2}</span>
         </div>
         <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
           Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
       </div>
       <div class="p-sec"><h4>Contacto</h4>
-        <b>${$("razon").value||"—"}</b><br>
-        ${$("contacto").value?"Contacto: "+$("contacto").value+"<br>":""}
+        <b>${capNombre($("razon").value)||"—"}</b><br>
+        ${$("contacto").value?"Contacto: "+capNombre($("contacto").value)+"<br>":""}
         ${$("rut").value?"RUT: "+$("rut").value+"<br>":""}
         ${$("tel").value?"Tel: "+$("tel").value+" · ":""}${$("correo").value||""}<br>
         ${$("dir").value?"Dirección: "+$("dir").value:""}
@@ -1291,9 +1304,9 @@ async function imprimirOT(numero){
           Canal: ${d.canal} · ${d.comprobante}</div>
       </div>
       <div class="p-sec"><h4>Contacto</h4>
-        <b>${d.cliente.razon_social||"—"}</b><br>
+        <b>${capNombre(d.cliente.razon_social)||"—"}</b><br>
         ${d.cliente.rut?"RUT: "+d.cliente.rut+"<br>":""}
-        ${d.cliente.contacto?"Contacto: "+d.cliente.contacto+"<br>":""}
+        ${d.cliente.contacto?"Contacto: "+capNombre(d.cliente.contacto)+"<br>":""}
         ${d.cliente.telefono?"Tel: "+d.cliente.telefono+" · ":""}${d.cliente.correo||""}<br>
         ${d.cliente.direccion?"Dirección: "+d.cliente.direccion:""}
       </div>
