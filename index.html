@@ -536,9 +536,10 @@ const EMPRESA = {
           → entregada a venta → entregada a cliente   (tai = terminación/armado/instalación) */
 const ESTADOS_OT = {
   pendiente_info:    "Pendiente info cliente",
-  diseno:            "Diseño",
-  impresion:         "Impresión",
-  tai:               "TAI (term./armado/instal.)",
+  para_disenar:      "Para diseñar",
+  diseno:            "Diseño OK",
+  impresion:         "Impresión OK",
+  tai:               "TAI OK",
   entregada_venta:   "Entregada a venta",
   entregada_cliente: "Entregada a cliente",
   anulada:           "Anulada"
@@ -842,11 +843,18 @@ async function verHistorial(){
   $("hist").style.display = "block";
   $("histBuscar").value = "";
   $("histBody").innerHTML = '<div class="empty">Cargando…</div>';
-  const {data, error} = await sb.from("cotizaciones")
-    .select("numero, fecha, estado, total, clientes(razon_social), ordenes_trabajo(numero)")
-    .order("id", {ascending:false}).limit(200);
+  const [{data, error}, ots] = await Promise.all([
+    sb.from("cotizaciones")
+      .select("numero, fecha, estado, total, clientes(razon_social)")
+      .order("id", {ascending:false}).limit(200),
+    sb.from("v_ot_resumen").select("numero, cotizacion_numero")
+  ]);
   if(error){ $("histBody").innerHTML = '<div class="empty">No se pudo cargar el historial.</div>'; return; }
   if(!data.length){ $("histBody").innerHTML = '<div class="empty">Aún no hay cotizaciones guardadas.</div>'; return; }
+  // Mapa cotización → OT (la vista sí trae las OT; el embed anidado no funcionaba)
+  const otMap = {};
+  (ots.data||[]).forEach(o=>{ otMap[o.cotizacion_numero] = o.numero; });
+  data.forEach(c=>{ c.ot_numero = otMap[c.numero] || null; });
   HIST_CACHE = data;
   pintarHist(data);
 }
@@ -875,8 +883,8 @@ function pintarHist(data){
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft);text-align:right;font-family:var(--mono)">'+clp(c.total)+'</td>'+
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+c.estado+'</td>'+
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+
-        (c.ordenes_trabajo && c.ordenes_trabajo.length
-          ? '<button onclick="imprimirOT(\''+c.ordenes_trabajo[0].numero+'\')">'+c.ordenes_trabajo[0].numero+'</button>'
+        (c.ot_numero
+          ? '<button onclick="imprimirOT(\''+c.ot_numero+'\')">'+c.ot_numero+'</button>'
           : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+')">Generar OT</button>')+
       '</td>'+
     '</tr>').join("")+'</tbody></table>';
