@@ -898,7 +898,7 @@ function imprimir(){
   const rows=items.map(it=>{
     const p=CATALOGO[it.key], c=calcItem(it);
     let desc=p.nombre;   // A8: sin sufijo de diseño
-    if((it.detalle||"").trim()) desc += " · " + it.detalle.trim();   // V4: descripción corta
+    if((it.detalle||"").trim()) desc += " · (" + it.detalle.trim() + ")";   // V4: descripción corta
     if(p.metodo==="m2") desc+=` · ${it.ancho}×${it.alto} m (${c.area.toFixed(2)} m²)`;
     const tl=[]; if(p.term){ (p.termIds||[]).forEach(k=>{ const d=TERM[k]; if(!d) return; if(d.tipo==="fija"&&it.terms[k])tl.push(d.nombre); if(d.tipo==="unidad"&&Number(it.terms[k])>0)tl.push(`${it.terms[k]} ${d.nombre}`);}); }
     if(tl.length) desc+=" · "+tl.join(", ");
