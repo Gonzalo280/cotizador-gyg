@@ -228,7 +228,33 @@
       <h2><span class="n">3</span> Detalles de la cotización</h2>
       <div class="body">
         <div class="grid2">
+          <div class="field"><label>Emitir por</label>
+            <select id="empCot">
+              <option value="GYG">GyG Impresores</option>
+              <option value="GDG">Grupo Digital Gráfico SpA</option>
+            </select></div>
           <div class="field"><label>Vigencia (días)</label><input id="vig" type="number" value="15" min="1"></div>
+          <div class="field"><label>Forma de pago</label>
+            <select id="fpago">
+              <option value=""></option>
+              <option>Contado</option>
+              <option>Crédito 30 días</option>
+              <option>Abono 50% aprobación y 50% crédito 30 días</option>
+            </select></div>
+          <div class="field"><label>Lugar de entrega</label>
+            <select id="lentrega">
+              <option value=""></option>
+              <option>Retiro en Santa Rosa 2224, Santiago Centro</option>
+              <option>Despacho a dirección del cliente</option>
+            </select></div>
+          <div class="field"><label>Tiempo de entrega</label>
+            <select id="tentrega">
+              <option value=""></option>
+              <option>1 a 3 días hábiles</option>
+              <option>2 a 4 días hábiles</option>
+              <option>3 a 6 días hábiles</option>
+              <option>A convenir</option>
+            </select></div>
           <div class="field"><label>Despacho</label><input id="despacho" placeholder="1 punto en Santiago"></div>
         </div>
         <div class="field"><label>Observaciones de la cotización</label><textarea id="obsCot" placeholder="Plazo de entrega, condiciones de pago…"></textarea></div>
@@ -375,7 +401,7 @@ async function cargarPerfil(){
   const {data:{user}} = await sb.auth.getUser();
   if(!user){ $("login").style.display="grid"; return; }
   const {data, error} = await sb.from("profiles")
-    .select("nombre, rol, descuento_max").eq("id", user.id).single();
+    .select("nombre, rol, descuento_max, empresa_default").eq("id", user.id).single();
   if(error || !data){
     $("loginErr").textContent="No se pudo cargar tu perfil. Avisa al administrador.";
     await sb.auth.signOut(); return;
@@ -389,6 +415,8 @@ async function cargarPerfil(){
   await cargarCatalogo();
   await cargarClientes();
   limpiarFormulario();   // B6: arrancar siempre con el formulario limpio
+  // E1: empresa por defecto del perfil (ej. Javier emite GDG automáticamente)
+  if(data.empresa_default && $("empCot")) $("empCot").value = data.empresa_default;
 }
 
 // Al abrir: si hay sesión guardada, entra directo; si no, muestra el login
@@ -518,18 +546,38 @@ document.addEventListener("click", e=>{
 const IVA = 0.19, MARGEN_PISO = 30;
 let TOPE_VEND = 10;  // se sobreescribe con el perfil real al iniciar sesión
 
-/* A3 — Datos fijos de la empresa (editar aquí si cambian) */
-const EMPRESA = {
-  direccion: "Santa Rosa 2224, Santiago Centro",
-  wsp:       "+56 9 8595 6685",
-  fono:      "22 544 02 35",
-  correo:    "g.gimpresores@gmail.com",
-  rrss:      "gyg.impresores",
-  titular:   "Luis Gutiérrez Solar",
-  rut:       "13.250.007-K",
-  cuenta:    "0213324553",
-  membrete:  "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular · DTF Textil · Gráfica Adhesiva · Letreros y más"
+/* A3/E1 — Datos de las DOS empresas (editar aquí si cambian) */
+const EMPRESAS = {
+  GYG: {
+    nombre:    "GyG IMPRESORES",
+    rutHeader: "",
+    direccion: "Santa Rosa 2224, Santiago Centro",
+    wsp:       "+56 9 8595 6685",
+    fono:      "22 544 02 35",
+    correo:    "g.gimpresores@gmail.com",
+    rrss:      "gyg.impresores",
+    banco:     "Banco Itaú",
+    titular:   "Luis Gutiérrez Solar",
+    rut:       "13.250.007-K",
+    cuenta:    "0213324553",
+    membrete:  "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular · DTF Textil · Gráfica Adhesiva · Letreros y más"
+  },
+  GDG: {
+    nombre:    "GRUPO DIGITAL GRÁFICO SpA",
+    rutHeader: "RUT 76.677.433-4",
+    direccion: "Santa Rosa 2224, Santiago Centro",
+    wsp:       "+56 9 5537 7286",
+    fono:      "+56 9 5537 7286",
+    correo:    "grupodigitalgrafico@gmail.com",
+    rrss:      "gyg.impresores",
+    banco:     "Banco BCI",
+    titular:   "Grupo Digital Gráfico SpA",
+    rut:       "76.677.433-4",
+    cuenta:    "52230210",
+    membrete:  "Gigantografías · Pendones · Roller · Stand Publicitario · Branding Vehicular · DTF Textil · Gráfica Adhesiva · Letreros y más"
+  }
 };
+function empresaSel(){ return EMPRESAS[($("empCot")&&$("empCot").value)||"GYG"] || EMPRESAS.GYG; }
 
 /* A9 — Estados de la OT: clave en BD → etiqueta visible
    Flujo: pendiente info cliente → diseño → impresión → tai
@@ -546,13 +594,14 @@ const ESTADOS_OT = {
 };
 
 /* A2 — Nombre del PDF: GyG-COTI-2026-0066-SantaRosa / GyG-OT-10012-SantaRosa */
-function nombreArchivo(tipo, numero, canal, cliente){
+function nombreArchivo(tipo, numero, canal, cliente, emp){
   const num = String(numero||"").replace(/^COT-/,"").replace(/^OT-/,"");
   const can = (canal||"").toString().replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
   // B1: primer nombre del cliente para identificar rápido en el listado
   const cli = (cliente||"").toString().trim().split(/\s+/)[0]
                 .replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
-  return ["GyG", tipo, num, can, cli].filter(Boolean).join("-")
+  const pref = (emp==="GDG") ? "GDG" : "GyG";
+  return [pref, tipo, num, can, cli].filter(Boolean).join("-")
          .replace(/[\/\\:*?"<>|]/g,"-");
 }
 
@@ -786,6 +835,10 @@ async function guardar(){
     const payload = {
       cliente_id,
       descuento_pct: Number($("disc").value) || 0,
+      empresa: $("empCot").value || "GYG",
+      forma_pago: $("fpago").value || "",
+      lugar_entrega: $("lentrega").value || "",
+      tiempo_entrega: $("tentrega").value || "",
       vigencia_dias: Number($("vig").value) || 15,
       observaciones: [
         $("despacho").value.trim() ? "Despacho: " + $("despacho").value.trim() : "",
@@ -832,6 +885,8 @@ function limpiarFormulario(){
    "despacho","obsCot"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
   const disc=$("disc"); if(disc) disc.value = 0;      // descuento vuelve a 0
   const vig=$("vig");   if(vig)  vig.value  = 15;
+  ["fpago","lentrega","tentrega"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
+  const ec=$("empCot"); if(ec) ec.value = (perfil&&perfil.empresa_default)||"GYG";
   const rh=$("rutHint"); if(rh) rh.textContent="";
   const cl=$("cliLista"); if(cl) cl.style.display="none";
   render();
@@ -909,14 +964,15 @@ function imprimir(){
     <div class="cmyk"><i></i><i></i><i></i><i></i></div>
     <div class="p-wrap">
       <div class="p-head">
-        <div class="co"><b>GyG IMPRESORES</b>
+        <div class="co"><b>${empresaSel().nombre}</b>
+          ${empresaSel().rutHeader?`<span>${empresaSel().rutHeader}</span>`:""}
           <span>Soluciones gráficas y publicidad visual</span>
-          <span>${EMPRESA.membrete}</span>
+          <span>${empresaSel().membrete}</span>
         </div>
         <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
           Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
       </div>
-      <div class="p-sec"><h4>Cliente</h4>
+      <div class="p-sec"><h4>Contacto</h4>
         <b>${$("razon").value||"—"}</b><br>
         ${$("contacto").value?"Contacto: "+$("contacto").value+"<br>":""}
         ${$("rut").value?"RUT: "+$("rut").value+"<br>":""}
@@ -934,19 +990,22 @@ function imprimir(){
         <div class="r total"><span>Total</span><span>${clp(t.total)}</span></div>
       </div>
       <div class="p-foot">
+        ${$("fpago").value?"<b>Forma de pago:</b> "+$("fpago").value+"<br>":""}
+        ${$("lentrega").value?"<b>Lugar de entrega:</b> "+$("lentrega").value+"<br>":""}
+        ${$("tentrega").value?"<b>Tiempo de entrega:</b> "+$("tentrega").value+"<br>":""}
         ${$("despacho").value?"<b>Despacho:</b> "+$("despacho").value+"<br>":""}
         ${$("obsCot").value?"<b>Observaciones:</b> "+$("obsCot").value+"<br>":""}
       </div>
       <div class="p-pago">
-        <div class="p-pago-t">Detalle para pagos · Banco Itaú</div>
-        <div>${EMPRESA.titular} · RUT: ${EMPRESA.rut} · Cta. Corriente: ${EMPRESA.cuenta} · ${EMPRESA.correo}</div>
+        <div class="p-pago-t">Detalle para pagos · ${empresaSel().banco}</div>
+        <div>${empresaSel().titular} · RUT: ${empresaSel().rut} · Cta. Corriente: ${empresaSel().cuenta} · ${empresaSel().correo}</div>
       </div>
       <div class="p-contacto">
         <div>
           <b>Información de contacto</b><br>
-          Teléfono: ${EMPRESA.fono} · WhatsApp: ${EMPRESA.wsp}<br>
-          Correo: ${EMPRESA.correo} · Instagram: ${EMPRESA.rrss}<br>
-          ${EMPRESA.direccion} · A pasos Metro Biobío
+          Teléfono: ${empresaSel().fono} · WhatsApp: ${empresaSel().wsp}<br>
+          Correo: ${empresaSel().correo} · Instagram: ${empresaSel().rrss}<br>
+          ${empresaSel().direccion} · A pasos Metro Biobío
         </div>
         <div style="text-align:right">
           <b>${(perfil&&perfil.nombre)||""}</b><br>
@@ -959,7 +1018,7 @@ function imprimir(){
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // C1: fijar el título y dar 200ms para que la pestaña lo actualice
   // antes de abrir el diálogo (evita la condición de carrera del nombre vacío)
-  document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value);
+  document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value, $("empCot").value);
   setTimeout(()=>{ window.print(); }, 200);
 }
 
@@ -1032,6 +1091,10 @@ async function guardarYGenerarOT(){
     const payload = {
       cliente_id,
       descuento_pct: Number($("disc").value) || 0,
+      empresa: $("empCot").value || "GYG",
+      forma_pago: $("fpago").value || "",
+      lugar_entrega: $("lentrega").value || "",
+      tiempo_entrega: $("tentrega").value || "",
       vigencia_dias: Number($("vig").value) || 15,
       observaciones: [
         $("despacho").value.trim() ? "Despacho: " + $("despacho").value.trim() : "",
@@ -1222,12 +1285,12 @@ async function imprimirOT(numero){
     <div class="cmyk"><i></i><i></i><i></i><i></i></div>
     <div class="p-wrap">
       <div class="p-head">
-        <div class="co"><b>GyG IMPRESORES</b><span>Orden de Trabajo</span><span>Santiago de Chile</span></div>
+        <div class="co"><b>${(EMPRESAS[d.empresa]||EMPRESAS.GYG).nombre}</b>${(EMPRESAS[d.empresa]||{}).rutHeader?`<span>${EMPRESAS[d.empresa].rutHeader}</span>`:""}<span>Orden de Trabajo</span><span>Santiago de Chile</span></div>
         <div class="meta"><b>OT: ${d.numero}</b><br>Pedido: ${d.fecha_pedido}<br>
           <b>Entrega: ${d.fecha_entrega||"por definir"}${d.hora_entrega?" · "+d.hora_entrega:""}</b><br>
           Canal: ${d.canal} · ${d.comprobante}</div>
       </div>
-      <div class="p-sec"><h4>Cliente</h4>
+      <div class="p-sec"><h4>Contacto</h4>
         <b>${d.cliente.razon_social||"—"}</b><br>
         ${d.cliente.rut?"RUT: "+d.cliente.rut+"<br>":""}
         ${d.cliente.contacto?"Contacto: "+d.cliente.contacto+"<br>":""}
@@ -1257,7 +1320,7 @@ async function imprimirOT(numero){
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
   // C1: fijar el título y dar 200ms antes de abrir el diálogo
-  document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social);
+  document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social, d.empresa);
   setTimeout(()=>{ window.print(); }, 200);
 }
 
