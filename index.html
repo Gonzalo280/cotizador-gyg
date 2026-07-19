@@ -132,6 +132,46 @@
     .ot-cut{border-top:1.5px dashed #999;height:0;margin:2mm 0;position:relative}
     .ot-cut::after{content:"cortar aqui";position:absolute;right:4mm;top:-9px;font-size:8px;color:#999;background:#fff;padding:0 4px}
   }
+  /* ===== B7: bordes de cajas más marcados ===== */
+  .card{border-color:#B9C2CE;box-shadow:0 1px 3px rgba(22,26,32,.06)}
+  .item{border-color:#C3CBD6}
+  /* ===== B7: numeración de ítems ===== */
+  .item .inum{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;
+    background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;flex:0 0 auto}
+  .item .top .tit{display:flex;align-items:center;gap:9px}
+  /* ===== B7: modal de previsualización ===== */
+  #prev{display:none;position:fixed;inset:0;background:rgba(10,13,17,.72);z-index:95;overflow:auto}
+  #prevCard{max-width:900px;margin:3vh auto;background:#fff;border-radius:10px;overflow:hidden}
+  #prevHead{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;
+    border-bottom:1px solid var(--line);font-weight:600;background:var(--card)}
+  #prevHead .tag{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--warn);background:var(--warn-bg);padding:4px 9px;border-radius:6px}
+  #prevScroll{max-height:64vh;overflow:auto;background:#fff}
+  #prevFoot{display:flex;gap:10px;justify-content:flex-end;padding:13px 18px;border-top:1px solid var(--line);background:var(--card)}
+  #prevFoot .btn{padding:11px 20px}
+  /* copia en pantalla de los estilos del documento (el bloque @media print queda intacto) */
+  #prevDoc .cmyk{height:6px}
+  #prevDoc .p-wrap{padding:28px 34px;font-size:13px;color:#000}
+  #prevDoc .p-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #161A20;padding-bottom:14px;margin-bottom:18px}
+  #prevDoc .p-head .co b{font-size:20px;letter-spacing:.5px}
+  #prevDoc .p-head .co span{display:block;font-size:11px;color:#444}
+  #prevDoc .p-head .meta{text-align:right;font-family:var(--mono);font-size:12px}
+  #prevDoc .p-head .meta b{font-size:15px}
+  #prevDoc .p-sec{margin-bottom:16px}
+  #prevDoc .p-sec h4{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:3px}
+  #prevDoc table.p-items{width:100%;border-collapse:collapse;font-size:12px}
+  #prevDoc table.p-items th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#666;border-bottom:1px solid #161A20;padding:6px 4px}
+  #prevDoc table.p-items td{padding:7px 4px;border-bottom:1px solid #eee;vertical-align:top}
+  #prevDoc table.p-items td.num,#prevDoc table.p-items th.num{text-align:right;font-family:var(--mono)}
+  #prevDoc .p-tot{margin-left:auto;width:50%;margin-top:14px}
+  #prevDoc .p-tot .r{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;padding:4px 0}
+  #prevDoc .p-tot .r.total{font-size:17px;font-weight:700;border-top:2px solid #161A20;margin-top:5px;padding-top:8px}
+  #prevDoc .p-foot{margin-top:26px;font-size:11px;color:#444;border-top:1px solid #ddd;padding-top:10px}
+  #prevDoc .p-pago{margin-top:14px;border:1px solid #161A20;padding:8px 10px;font-size:11px}
+  #prevDoc .p-pago-t{font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:10px;margin-bottom:3px}
+  #prevDoc .p-contacto{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;color:#333;border-top:1px solid #ddd;padding-top:8px}
+  #btnSaldoTotal.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  @media print{ #prev{display:none!important} }
   /* login */
   #login{position:fixed;inset:0;background:var(--ink);display:grid;place-items:center;z-index:100}
   .login-card{background:var(--card);border-radius:14px;padding:30px 28px;width:min(380px,92vw)}
@@ -272,8 +312,8 @@
         <div class="di"><input id="disc" type="number" value="0" min="0" oninput="refreshSummary()"> <span style="font-family:var(--mono);font-size:13px" id="discMonto"></span></div>
       </div>
       <div id="marginBox"></div>
-      <div class="act"><button class="btn block" id="btnGuardar" onclick="guardar()">Guardar y generar PDF</button></div>
-      <div class="act" style="margin-top:6px"><button class="btn block" id="btnGuardarOT" onclick="guardarYGenerarOT()" style="background:var(--accent-d)">Guardar y generar OT</button></div>
+      <div class="act"><button class="btn block" id="btnGuardar" onclick="previsualizar('pdf')">Previsualizar y guardar PDF</button></div>
+      <div class="act" style="margin-top:6px"><button class="btn block" id="btnGuardarOT" onclick="previsualizar('ot')" style="background:var(--accent-d)">Previsualizar y generar OT</button></div>
       <div class="note" id="footNote"></div>
     </div>
   </div>
@@ -346,7 +386,8 @@
       <div id="pagoForm" style="margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px">
         <div class="field"><label>Registrar nuevo pago</label>
           <div style="display:flex;gap:6px;margin-bottom:6px">
-            <button type="button" onclick="setPagoTotal()">Pagar saldo total</button>
+            <button type="button" id="btnSaldoTotal" onclick="setPagoTotal()">Pagar saldo total</button>
+            <button type="button" onclick="limpiarPagoMonto()">Limpiar</button>
           </div>
           <div class="grid2">
             <input id="pagoMonto" type="number" min="0" placeholder="Monto $">
@@ -363,6 +404,22 @@
         <div id="pagoOk"  style="color:var(--ok);font-size:13px;margin-bottom:6px"></div>
         <button class="btn block" id="btnPago" onclick="confirmarPago()">Registrar pago</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== B7: PREVISUALIZACIÓN ANTES DE GUARDAR ===== -->
+<div id="prev">
+  <div id="prevCard">
+    <div id="prevHead">
+      <span>Previsualización</span>
+      <span class="tag">Aún no se guarda</span>
+      <button class="x" onclick="cerrarPrev()" title="Volver a editar">&times;</button>
+    </div>
+    <div id="prevScroll"><div id="prevDoc"></div></div>
+    <div id="prevFoot">
+      <button class="btn ghost" onclick="cerrarPrev()">Volver a editar</button>
+      <button class="btn" id="prevAccion" onclick="confirmarPrev()">Confirmar y guardar</button>
     </div>
   </div>
 </div>
@@ -709,7 +766,7 @@ function totals(){
 }
 
 /* ---------- RENDER ---------- */
-function itemHTML(it){
+function itemHTML(it, idx){
   const p=CATALOGO[it.key], c=calcItem(it);
   let dims="";
   if(p.metodo==="m2"){
@@ -748,7 +805,7 @@ function itemHTML(it){
   const mgColor = role==="admin" ? ((c.subtotal>0 && mpct<MARGEN_PISO)?"var(--warn)":"var(--ok)") : "";
   return `<div class="item">
     <div class="top">
-      <div><div class="pname">${p.nombre}</div></div>
+      <div class="tit"><span class="inum">${(idx||0)+1}</span><div class="pname">${p.nombre}</div></div>
       <button class="x" onclick="rmItem(${it.id})" title="Quitar">×</button>
     </div>
     ${p.permiteDiseno ? `<label class="switch"><input type="checkbox" ${it.diseno?"checked":""} onchange="upd(${it.id},'diseno',this.checked)"> Incluye diseño <span style="font-weight:400;color:var(--ink-soft)">(${it.diseno?clp(p.precio.con):clp(p.precio.sin)}${p.metodo==="m2"?"/m²":"/u"})</span></label>` : ``}
@@ -759,7 +816,10 @@ function itemHTML(it){
 }
 
 function render(){
-  $("cotNum").textContent = numeroActual || "COT · se asigna al guardar";
+  // B7: contador de ítems en el recuadro negro
+  const _n = items.length;
+  $("cotNum").textContent = (numeroActual || "COT · se asigna al guardar")
+    + (_n ? "  ·  " + _n + (_n===1 ? " ítem" : " ítems") : "");
   $("items").innerHTML = items.length ? items.map(itemHTML).join("") : `<div class="empty">Sin productos. Agrega uno arriba.</div>`;
   $("footNote").innerHTML = role==="admin"
     ? "Costos y márgenes solo visibles para administrador. Bolsillo+tubo se costea por ancho (tubo + 4 regatones); no incluye mano de obra de armado."
@@ -884,7 +944,7 @@ async function guardar(){
   }catch(e){
     alert("No se pudo guardar: " + (e.message || e));
   }finally{
-    btn.disabled = false; btn.textContent = "Guardar y generar PDF";
+    btn.disabled = false; btn.textContent = "Previsualizar y guardar PDF";
   }
 }
 
@@ -959,7 +1019,8 @@ function pintarHist(data){
 function cerrarHistorial(){ $("hist").style.display = "none"; }
 
 /* ---------- PDF (impresión) ---------- */
-function imprimir(){
+/* B7: el documento se arma aparte para poder previsualizarlo sin guardar */
+function docCotHTML(numero){
   const t=totals();
   const fecha=new Date().toLocaleDateString("es-CL");
   const rows=items.map(it=>{
@@ -972,7 +1033,7 @@ function imprimir(){
     return `<tr><td>${desc}</td><td class="num">${c.cant}</td><td class="num">${clp(c.unitPrice)}</td><td class="num">${clp(c.subtotal)}</td></tr>`;
   }).join("");
 
-  $("print").innerHTML=`
+  return `
     <div class="cmyk"><i></i><i></i><i></i><i></i></div>
     <div class="p-wrap">
       <div class="p-head">
@@ -982,7 +1043,7 @@ function imprimir(){
           <span>${empresaSel().membrete1}</span>
           <span>${empresaSel().membrete2}</span>
         </div>
-        <div class="meta"><b>${numeroActual}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
+        <div class="meta"><b>${numero}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
           Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
       </div>
       <div class="p-sec"><h4>Contacto</h4>
@@ -1026,15 +1087,43 @@ function imprimir(){
         </div>
       </div>
     </div>`;
+}
+
+function imprimir(){
+  $("print").innerHTML = docCotHTML(numeroActual);
   // A2: nombre del archivo → GyG-COTI-2026-0066-SantaRosa.pdf
   // A5: cerrar modales abiertos antes de imprimir
-  cerrarHistorial(); cerrarOTs(); cerrarOtModal();
+  cerrarHistorial(); cerrarOTs(); cerrarOtModal(); cerrarPrev();
   // C1: fijar el título y dar 200ms para que la pestaña lo actualice
   // antes de abrir el diálogo (evita la condición de carrera del nombre vacío)
   document.title = nombreArchivo("COTI", numeroActual, null, $("razon").value, $("empCot").value);
   setTimeout(()=>{ window.print(); }, 200);
 }
 
+/* ===== B7: PREVISUALIZAR ANTES DE GUARDAR =====
+   Nada toca la base hasta que el usuario confirme. "Volver a editar" no borra nada. */
+let PREV_MODO = null;
+
+function previsualizar(modo){
+  if(!items.length){ alert("Agrega al menos un producto."); return; }
+  if(!$("razon").value.trim()){ alert("Falta la razón social del cliente."); return; }
+  PREV_MODO = modo;
+  $("prevDoc").innerHTML = docCotHTML("BORRADOR · N° se asigna al guardar");
+  $("prevAccion").textContent = (modo==="ot") ? "Confirmar y generar OT" : "Confirmar y guardar PDF";
+  $("prev").style.display = "block";
+  $("prevScroll").scrollTop = 0;
+}
+
+function cerrarPrev(){
+  const p = $("prev"); if(p) p.style.display = "none";
+  PREV_MODO = null;
+}
+
+function confirmarPrev(){
+  const m = PREV_MODO;
+  cerrarPrev();
+  if(m === "ot") guardarYGenerarOT(); else guardar();
+}
 
 /* ---------- ÓRDENES DE TRABAJO ---------- */
 let otCotNum = null, otCotTotal = 0, CANALES = [];
@@ -1138,7 +1227,7 @@ async function guardarYGenerarOT(){
   }catch(e){
     alert("No se pudo guardar: " + (e.message || e));
   }finally{
-    btn.disabled = false; btn.textContent = "Guardar y generar OT";
+    btn.disabled = false; btn.textContent = "Previsualizar y generar OT";
   }
 }
 
@@ -1206,6 +1295,7 @@ async function abrirPagoModal(numero){
   $("pagoOk").textContent  = "";
   $("pagoMonto").value = "";
   $("pagoMedio").value = "";
+  { const b=$("btnSaldoTotal"); if(b){ b.classList.remove("on"); b.textContent="Pagar saldo total"; } }
   $("pagoTitulo").textContent = "OT " + numero;
   $("pagoBody").innerHTML = '<div class="empty">Cargando…</div>';
   await refrescarPagos();
@@ -1254,7 +1344,25 @@ async function refrescarPagos(){
   if(pagoSaldo > 0) $("pagoHint").textContent = "Saldo pendiente: " + clp(pagoSaldo);
 }
 
-function setPagoTotal(){ $("pagoMonto").value = Math.round(pagoSaldo); }
+/* B7: "Pagar saldo total" es un interruptor — se puede desmarcar y corregir */
+function setPagoTotal(){
+  const inp = $("pagoMonto"), btn = $("btnSaldoTotal");
+  const total = Math.round(pagoSaldo);
+  if(Number(inp.value) === total){          // ya estaba puesto → se suelta
+    inp.value = "";
+    if(btn){ btn.classList.remove("on"); btn.textContent = "Pagar saldo total"; }
+  }else{
+    inp.value = total;
+    if(btn){ btn.classList.add("on"); btn.textContent = "Saldo total ✓ (clic para soltar)"; }
+  }
+  inp.focus();
+}
+function limpiarPagoMonto(){
+  const inp = $("pagoMonto"), btn = $("btnSaldoTotal");
+  inp.value = "";
+  if(btn){ btn.classList.remove("on"); btn.textContent = "Pagar saldo total"; }
+  inp.focus();
+}
 
 async function confirmarPago(){
   $("pagoErr").textContent = ""; $("pagoOk").textContent = "";
@@ -1270,6 +1378,7 @@ async function confirmarPago(){
   if(error){ $("pagoErr").textContent = "No se pudo registrar: " + error.message; return; }
   $("pagoOk").textContent = "Pago de " + clp(monto) + " registrado.";
   $("pagoMonto").value = ""; $("pagoMedio").value = "";
+  { const b=$("btnSaldoTotal"); if(b){ b.classList.remove("on"); b.textContent="Pagar saldo total"; } }
   await refrescarPagos();
 }
 
