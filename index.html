@@ -117,6 +117,7 @@
     .p-contacto{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;color:#333;border-top:1px solid #ddd;padding-top:8px}
     .p-wrap.cot{display:flex;flex-direction:column;min-height:243mm}
     .p-wrap.cot .p-bottom{margin-top:auto}
+    .p-bottom{break-inside:avoid;page-break-inside:avoid}
     /* OT en media hoja de oficio: dos por hoja, línea de corte al medio */
     .ot-copy{height:152mm;overflow:hidden;padding:6mm 8mm;box-sizing:border-box;page-break-inside:avoid}
     .ot-copy .p-wrap{padding:4px 6px;font-size:11px}
@@ -1121,7 +1122,7 @@ function previsualizar(modo){
   if(!$("razon").value.trim()){ alert("Falta la razón social del cliente."); return; }
   PREV_MODO = modo;
   $("prevDoc").innerHTML = docCotHTML("BORRADOR · N° se asigna al guardar");
-  const av = $("prevAviso"), MAX_HOJA = 14;
+  const av = $("prevAviso"), MAX_HOJA = 12;
   if(modo !== "ot" && items.length > MAX_HOJA){
     av.textContent = "Atención: con " + items.length + " ítems esta cotización va a ocupar más de una hoja.";
     av.style.display = "block";
