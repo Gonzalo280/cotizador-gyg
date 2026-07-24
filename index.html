@@ -115,6 +115,8 @@
     .p-pago{margin-top:14px;border:1px solid #161A20;padding:8px 10px;font-size:11px}
     .p-pago-t{font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:10px;margin-bottom:3px}
     .p-contacto{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;color:#333;border-top:1px solid #ddd;padding-top:8px}
+    .p-wrap.cot{display:flex;flex-direction:column;min-height:243mm}
+    .p-wrap.cot .p-bottom{margin-top:auto}
     /* OT en media hoja de oficio: dos por hoja, línea de corte al medio */
     .ot-copy{height:152mm;overflow:hidden;padding:6mm 8mm;box-sizing:border-box;page-break-inside:avoid}
     .ot-copy .p-wrap{padding:4px 6px;font-size:11px}
@@ -174,6 +176,9 @@
   #prevDoc .p-pago{margin-top:14px;border:1px solid #161A20;padding:8px 10px;font-size:11px}
   #prevDoc .p-pago-t{font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:10px;margin-bottom:3px}
   #prevDoc .p-contacto{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;color:#333;border-top:1px solid #ddd;padding-top:8px}
+  #prevDoc .p-wrap.cot{display:flex;flex-direction:column;min-height:243mm}
+  #prevDoc .p-wrap.cot .p-bottom{margin-top:auto}
+  #prevAviso{display:none;padding:9px 18px;background:var(--warn-bg);color:var(--warn);font-size:12.5px;border-bottom:1px solid var(--line)}
   #btnSaldoTotal.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   @media print{ #prev{display:none!important} }
   /* login */
@@ -420,6 +425,7 @@
       <span class="tag">Aún no se guarda</span>
       <button class="x" onclick="cerrarPrev()" title="Volver a editar">&times;</button>
     </div>
+    <div id="prevAviso"></div>
     <div id="prevScroll"><div id="prevDoc"></div></div>
     <div id="prevFoot">
       <button class="btn ghost" onclick="cerrarPrev()">Volver a editar</button>
@@ -1039,7 +1045,7 @@ function docCotHTML(numero){
 
   return `
     <div class="cmyk"><i></i><i></i><i></i><i></i></div>
-    <div class="p-wrap">
+    <div class="p-wrap cot">
       <div class="p-head">
         <div class="co"><b>${empresaSel().nombre}</b>
           ${empresaSel().rutHeader?`<span>${empresaSel().rutHeader}</span>`:""}
@@ -1074,20 +1080,22 @@ function docCotHTML(numero){
         ${$("despacho").value?"<b>Despacho:</b> "+$("despacho").value+"<br>":""}
         ${$("obsCot").value?"<b>Observaciones:</b> "+$("obsCot").value+"<br>":""}
       </div>
-      <div class="p-pago">
-        <div class="p-pago-t">Detalle para pagos · ${empresaSel().banco}</div>
-        <div>${empresaSel().titular} · RUT: ${empresaSel().rut} · Cta. Corriente: ${empresaSel().cuenta} · ${empresaSel().correo}</div>
-      </div>
-      <div class="p-contacto">
-        <div>
-          <b>Información de contacto</b><br>
-          Teléfono: ${empresaSel().fono} · WhatsApp: ${empresaSel().wsp}<br>
-          Correo: ${empresaSel().correo} · Instagram: ${empresaSel().rrss}<br>
-          ${empresaSel().direccion} · A pasos Metro Biobío
+      <div class="p-bottom">
+        <div class="p-pago">
+          <div class="p-pago-t">Datos para transferencia · ${empresaSel().banco}</div>
+          <div>${empresaSel().titular} · RUT: ${empresaSel().rut} · Cta. Corriente: ${empresaSel().cuenta} · ${empresaSel().correo}</div>
         </div>
-        <div style="text-align:right">
-          <b>${(perfil&&perfil.nombre)||""}</b><br>
-          <span style="font-size:10px;color:#666">Ejecutivo/a de ventas</span>
+        <div class="p-contacto">
+          <div>
+            <b>Información de contacto</b><br>
+            Teléfono: ${empresaSel().fono} · WhatsApp: ${empresaSel().wsp}<br>
+            Correo: ${empresaSel().correo} · Instagram: ${empresaSel().rrss}<br>
+            ${empresaSel().direccion} · A pasos Metro Biobío
+          </div>
+          <div style="text-align:right">
+            <b>${(perfil&&perfil.nombre)||""}</b><br>
+            <span style="font-size:10px;color:#666">Ejecutivo/a de ventas</span>
+          </div>
         </div>
       </div>
     </div>`;
@@ -1113,6 +1121,11 @@ function previsualizar(modo){
   if(!$("razon").value.trim()){ alert("Falta la razón social del cliente."); return; }
   PREV_MODO = modo;
   $("prevDoc").innerHTML = docCotHTML("BORRADOR · N° se asigna al guardar");
+  const av = $("prevAviso"), MAX_HOJA = 14;
+  if(modo !== "ot" && items.length > MAX_HOJA){
+    av.textContent = "Atención: con " + items.length + " ítems esta cotización va a ocupar más de una hoja.";
+    av.style.display = "block";
+  }else{ av.style.display = "none"; }
   $("prevAccion").textContent = (modo==="ot") ? "Confirmar y generar OT" : "Confirmar y guardar PDF";
   $("prev").style.display = "block";
   $("prevScroll").scrollTop = 0;
