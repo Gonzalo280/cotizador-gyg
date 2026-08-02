@@ -248,7 +248,7 @@
         <div class="field"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="capInput(this); clienteSelId=null; render()"></div>
         <div class="grid2">
           <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="capInput(this); render()"></div>
-          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut()"><div id="rutHint" class="hint"></div></div>
+          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut(); render()"><div id="rutHint" class="hint"></div></div>
         </div>
         <div class="grid2">
           <div class="field"><label>Teléfono</label><input id="tel" autocomplete="off" placeholder="+56 9 ..."></div>
@@ -306,6 +306,12 @@
               <option>A convenir</option>
             </select></div>
           <div class="field"><label>Despacho</label><input id="despacho" placeholder="1 punto en Santiago"></div>
+        </div>
+        <div class="field" id="canalOverrideWrap" style="display:none">
+          <label>Canal de venta (override admin) <span id="canalOverrideBadge" style="display:none;font-family:var(--mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--warn);background:var(--warn-bg);padding:2px 7px;border-radius:6px;margin-left:6px">OVERRIDE ADMIN</span></label>
+          <select id="canalOverride" onchange="onCanalOverrideChange()">
+            <option value="">Automático (según cliente)</option>
+          </select>
         </div>
         <div class="field"><label>Observaciones de la cotización</label><textarea id="obsCot" placeholder="Plazo de entrega, condiciones de pago…"></textarea></div>
       </div>
@@ -461,7 +467,7 @@ async function entrar(){
 
 async function salir(){
   await sb.auth.signOut();
-  perfil=null; role="vendedor";
+  perfil=null; role="vendedor"; canalOverride=null;
   $("login").style.display="grid"; $("userchip").style.display="none";
 }
 
@@ -482,6 +488,13 @@ async function cargarPerfil(){
   $("userInfo").innerHTML = `<b>${data.nombre}</b> · ${data.rol}`;
   await cargarCatalogo();
   await cargarClientes();
+  await cargarCanales();   // F2: se necesita antes del primer render (nombre de canal en el resumen)
+  if(role === "admin"){    // F2 · C4: override de canal, solo visible para admin
+    poblarCanalOverride();
+    $("canalOverrideWrap").style.display = "block";
+  }else{
+    $("canalOverrideWrap").style.display = "none";
+  }
   limpiarFormulario();   // B6: arrancar siempre con el formulario limpio
   // E1: empresa por defecto del perfil (ej. Javier emite GDG automáticamente)
   if(data.empresa_default && $("empCot")) $("empCot").value = data.empresa_default;
@@ -491,13 +504,14 @@ async function cargarPerfil(){
 cargarPerfil();
 
 /* ---------- CATÁLOGO (se carga desde Supabase al iniciar sesión) ---------- */
-let CATALOGO = {};   // productos: precio público; costo solo llega si eres admin (RLS)
+let CATALOGO = {};   // productos: precio de la lista activa; costo solo llega si eres admin (RLS)
 let TERM = {};       // terminaciones; las dinámicas traen su config (tubo, regatones)
+let PRECIOS = {};    // F2 · C2: precios de TODAS las listas en memoria, indexado por lista_precio_id → producto_id
 
 async function cargarCatalogo(){
   const [prods, precios, terms, pterms] = await Promise.all([
     sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden,config").eq("activo", true),
-    sb.from("producto_precios").select("producto_id,incluye_diseno,precio"),
+    sb.from("producto_precios").select("producto_id,lista_precio_id,incluye_diseno,precio"),
     sb.from("terminaciones").select("id,nombre,precio,costo,tipo,dinamico,config"),
     sb.from("producto_terminaciones").select("producto_id,terminacion_id")
   ]);
@@ -519,15 +533,29 @@ async function cargarCatalogo(){
                       minimo:Number((p.config||{}).minimo)||0,   // V4: mínimo comercial por ítem
                       orden:(p.orden==null?9999:p.orden), termIds:[], precio:{con:0,sin:0}, costo:{con:0,sin:0}};
   });
-  precios.data.forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.precio[r.incluye_diseno?"con":"sin"]=Number(r.precio); });
+  // F2 · C2: precios por lista (se guardan TODAS, no solo la del canal actual)
+  PRECIOS = {};
+  precios.data.forEach(r=>{
+    const lid = r.lista_precio_id;
+    if(!PRECIOS[lid]) PRECIOS[lid] = {};
+    if(!PRECIOS[lid][r.producto_id]) PRECIOS[lid][r.producto_id] = {con:0, sin:0};
+    PRECIOS[lid][r.producto_id][r.incluye_diseno?"con":"sin"] = Number(r.precio);
+  });
+  // Si un producto trae un solo precio, se usa para ambos modos (con/sin diseño) — por lista
+  for(const lid in PRECIOS){
+    for(const pid in PRECIOS[lid]){
+      const pr = PRECIOS[lid][pid];
+      if(!pr.sin && pr.con) pr.sin = pr.con;
+      if(!pr.con && pr.sin) pr.con = pr.sin;
+    }
+  }
   (costos.data||[]).forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.costo[r.incluye_diseno?"con":"sin"]=Number(r.costo); });
-  // Si un producto trae un solo precio (o costo), se usa para ambos modos (con/sin diseño)
+  // Si un producto trae un solo costo, se usa para ambos modos (con/sin diseño)
   for(const k in CATALOGO){ const c=CATALOGO[k];
-    if(!c.precio.sin && c.precio.con) c.precio.sin=c.precio.con;
-    if(!c.precio.con && c.precio.sin) c.precio.con=c.precio.sin;
     if(!c.costo.sin  && c.costo.con)  c.costo.sin =c.costo.con;
     if(!c.costo.con  && c.costo.sin)  c.costo.con =c.costo.sin;
   }
+  aplicarListaActiva();   // F2 · C2: puebla CATALOGO[k].precio según el canal activo (lista 1 por defecto)
 
   // Qué terminaciones ofrece cada producto (tabla de relación)
   (pterms.data||[]).forEach(r=>{ const c=CATALOGO[r.producto_id]; if(c) c.termIds.push(r.terminacion_id); });
@@ -548,13 +576,53 @@ async function cargarCatalogo(){
     .forEach(([k,p])=>{ const o=document.createElement("option"); o.value=k; o.textContent=p.nombre; sel.appendChild(o); });
 }
 
+/* ---------- F2: CANAL (motor canal-consciente ya vive en el servidor; esto es solo presentación) ---------- */
+let canalOverride = null;   // solo admin; código de canal forzado, o null = automático
+
+// Canal del cliente elegido (10000 si no hay cliente seleccionado — igual que el servidor)
+function canalDelCliente(){
+  if(!clienteSelId) return 10000;
+  const c = CLIENTES.find(x=>String(x.id)===String(clienteSelId));
+  return (c && Number(c.canal_codigo)) || 10000;
+}
+// Mismo orden de resolución que el RPC: override admin → canal del cliente → mesón
+function canalEfectivo(){
+  if(role==="admin" && canalOverride) return Number(canalOverride);
+  return canalDelCliente();
+}
+// Misma correspondencia que el motor: canal 40000 → lista 2; cualquier otro → lista 1
+function listaEfectiva(canal){ return Number(canal)===40000 ? 2 : 1; }
+// Reasigna CATALOGO[k].precio según el canal activo, para que el cálculo en vivo
+// coincida con lo que cobrará el servidor (incluida la lista Empresa cuando F3 la cambie)
+function aplicarListaActiva(){
+  const lid = listaEfectiva(canalEfectivo());
+  const tabla = PRECIOS[lid] || PRECIOS[1] || {};
+  for(const k in CATALOGO){
+    CATALOGO[k].precio = tabla[k] || (PRECIOS[1] && PRECIOS[1][k]) || {con:0, sin:0};
+  }
+}
+function nombreCanal(codigo){
+  const c = CANALES.find(x=>Number(x.codigo)===Number(codigo));
+  return c ? c.nombre : String(codigo);
+}
+function poblarCanalOverride(){
+  const sel = $("canalOverride"); if(!sel) return;
+  sel.innerHTML = '<option value="">Automático (según cliente)</option>' +
+    CANALES.map(c=>`<option value="${c.codigo}">${c.codigo} · ${c.nombre}</option>`).join("");
+}
+function onCanalOverrideChange(){
+  canalOverride = $("canalOverride").value || null;
+  const b=$("canalOverrideBadge"); if(b) b.style.display = canalOverride ? "inline-block" : "none";
+  render();
+}
+
 /* ---------- CLIENTES (desplegable de los ya ingresados) ---------- */
 let CLIENTES = [];
 let clienteSelId = null;   // id del cliente elegido en el desplegable (si lo hay)
 
 async function cargarClientes(){
   const {data, error} = await sb.from("clientes")
-    .select("id,razon_social,nombre_contacto,rut,telefono,correo,direccion")
+    .select("id,razon_social,nombre_contacto,rut,telefono,correo,direccion,canal_codigo")
     .order("razon_social");
   CLIENTES = (error || !data) ? [] : data;
   $("cliHint").textContent = CLIENTES.length + " clientes en la base";
@@ -673,15 +741,17 @@ const ESTADOS_OT = {
   anulada:           "Anulada"
 };
 
-/* A2 — Nombre del PDF: GyG-COTI-2026-0066-SantaRosa / GyG-OT-10012-SantaRosa */
-function nombreArchivo(tipo, numero, canal, cliente, emp){
+/* A2 — Nombre del PDF: GyG-COTI-2026-0066-SantaRosa / GyG-OT-10012-SantaRosa
+   F2 · C7: la OT además lleva la cotización de origen → GyG-OT-40017-COTI-2026-0188-Empresa-Juan */
+function nombreArchivo(tipo, numero, canal, cliente, emp, cotOrigen){
   const num = String(numero||"").replace(/^COT-/,"").replace(/^OT-/,"");
   const can = (canal||"").toString().replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
   // B1: primer nombre del cliente para identificar rápido en el listado
   const cli = (cliente||"").toString().trim().split(/\s+/)[0]
                 .replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/g,"");
+  const cot = cotOrigen ? "COTI-" + String(cotOrigen).replace(/^COT-/,"") : "";
   const pref = (emp==="GDG") ? "GDG" : "GyG";
-  return [pref, tipo, num, can, cli].filter(Boolean).join("-")
+  return [pref, tipo, num, cot, can, cli].filter(Boolean).join("-")
          .replace(/[\/\\:*?"<>|]/g,"-");
 }
 
@@ -827,6 +897,7 @@ function itemHTML(it, idx){
 }
 
 function render(){
+  aplicarListaActiva();   // F2: la lista de precios sigue al canal activo antes de pintar nada
   // B7: contador de ítems en el recuadro negro
   const _n = items.length;
   $("cotNum").textContent = (numeroActual || "COT · se asigna al guardar")
@@ -840,6 +911,7 @@ function render(){
 
 // Actualiza subtotales y márgenes por línea SIN recrear los inputs (no se pierde el foco al escribir)
 function refreshTotals(){
+  aplicarListaActiva();   // F2: la lista de precios sigue al canal activo antes de pintar nada
   items.forEach(it=>{
     const c=calcItem(it);
     const s=document.getElementById("sub-"+it.id); if(s) s.textContent=clp(c.subtotal);
@@ -865,6 +937,7 @@ function refreshSummary(){
   $("discMonto").textContent = t.descMonto>0 ? "− "+clp(t.descMonto) : "";
 
   $("sumRows").innerHTML =
+    `<div class="srow muted"><span>Canal</span><span>${nombreCanal(canalEfectivo())}</span></div>`+
     `<div class="srow muted"><span>Neto bruto</span><span>${clp(t.netoBruto)}</span></div>`+
     (t.descMonto>0?`<div class="srow muted"><span>Descuento ${t.d}%</span><span>− ${clp(t.descMonto)}</span></div>`:"")+
     `<div class="srow"><span>Neto</span><span>${clp(t.neto)}</span></div>`+
@@ -943,6 +1016,8 @@ async function guardar(){
                  detalle: (it.detalle||"").trim() };
       })
     };
+    // F2 · C5: solo el admin puede forzar el canal, y solo si usó el override
+    if(role === "admin" && canalOverride) payload.canal_codigo = Number(canalOverride);
     // La base recalcula, valida tope de descuento y piso de margen, y asigna el correlativo
     const {data, error} = await sb.rpc("guardar_cotizacion", {p: payload});
     if(error) throw new Error(error.message);
@@ -972,6 +1047,10 @@ function limpiarFormulario(){
   const ec=$("empCot"); if(ec) ec.value = (perfil&&perfil.empresa_default)||"GYG";
   const rh=$("rutHint"); if(rh) rh.textContent="";
   const cl=$("cliLista"); if(cl) cl.style.display="none";
+  // F2: el override de canal no debe arrastrarse a la siguiente cotización
+  canalOverride = null;
+  const co=$("canalOverride"); if(co) co.value = "";
+  const cb=$("canalOverrideBadge"); if(cb) cb.style.display = "none";
   render();
 }
 
@@ -983,7 +1062,7 @@ async function verHistorial(){
   $("histBody").innerHTML = '<div class="empty">Cargando…</div>';
   const [{data, error}, ots] = await Promise.all([
     sb.from("cotizaciones")
-      .select("numero, fecha, estado, total, clientes(razon_social)")
+      .select("numero, fecha, estado, total, canal_codigo, clientes(razon_social)")
       .order("id", {ascending:false}).limit(200),
     sb.from("v_ot_resumen").select("numero, cotizacion_numero")
   ]);
@@ -1023,7 +1102,7 @@ function pintarHist(data){
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+
         (c.ot_numero
           ? '<button onclick="imprimirOT(\''+c.ot_numero+'\')">'+c.ot_numero+'</button>'
-          : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+')">Generar OT</button>')+
+          : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+','+(c.canal_codigo||10000)+')">Generar OT</button>')+
       '</td>'+
     '</tr>').join("")+'</tbody></table>';
 }
@@ -1059,6 +1138,7 @@ function docCotHTML(numero){
       </div>
       <div class="p-sec"><h4>Contacto</h4>
         <b>${capNombre($("razon").value)||"—"}</b><br>
+        Canal: ${nombreCanal(canalEfectivo())}<br>
         ${$("contacto").value?"Contacto: "+capNombre($("contacto").value)+"<br>":""}
         ${$("rut").value?"RUT: "+$("rut").value+"<br>":""}
         ${$("tel").value?"Tel: "+$("tel").value+" · ":""}${$("correo").value||""}<br>
@@ -1152,11 +1232,15 @@ async function cargarCanales(){
   CANALES = data || [];
 }
 
-async function abrirOtModal(cotNumero, total){
+async function abrirOtModal(cotNumero, total, canalCot){
   otCotNum = cotNumero; otCotTotal = Number(total)||0;
   await cargarCanales();
   $("otCanal").innerHTML = '<option value="">Seleccionar canal…</option>' +
     CANALES.map(c=>`<option value="${c.codigo}">${c.codigo} · ${c.nombre}</option>`).join("");
+  // F2 · C6: llega pre-llenado con el canal de la cotización de origen; sigue siendo editable
+  if(canalCot!=null && CANALES.some(c=>String(c.codigo)===String(canalCot))){
+    $("otCanal").value = String(canalCot);
+  }
   $("otModalCot").textContent = cotNumero + " · " + clp(otCotTotal);
   $("otAbono").value = ""; $("otMedio").value = ""; $("otObs").value = "";
   $("otFecha").value = ""; $("otHora").value = ""; $("otErr").textContent = "";
@@ -1236,11 +1320,14 @@ async function guardarYGenerarOT(){
                  detalle: (it.detalle||"").trim() };
       })
     };
+    // F2 · C5: solo el admin puede forzar el canal, y solo si usó el override
+    if(role === "admin" && canalOverride) payload.canal_codigo = Number(canalOverride);
+    const canalUsado = canalEfectivo();   // F2 · C6: para pre-llenar el canal en el modal de OT
     const {data, error} = await sb.rpc("guardar_cotizacion", {p: payload});
     if(error) throw new Error(error.message);
     await cargarClientes();
     const t = totals();
-    await abrirOtModal(data.numero, t.total);
+    await abrirOtModal(data.numero, t.total, canalUsado);
     limpiarFormulario();   // B6: el modal ya tiene numero y total; el form queda listo
   }catch(e){
     alert("No se pudo guardar: " + (e.message || e));
@@ -1459,8 +1546,9 @@ async function imprimirOT(numero){
   // A5: cerrar cualquier modal abierto antes de imprimir (si no, salen en el PDF)
   cerrarHistorial(); cerrarOTs(); cerrarOtModal();
   // A2: nombre del archivo → GyG-OT-10012-SantaRosa.pdf
+  // F2 · C7: incluye la cotización de origen → GyG-OT-40017-COTI-2026-0188-Empresa-Juan
   // C1: fijar el título y dar 200ms antes de abrir el diálogo
-  document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social, d.empresa);
+  document.title = nombreArchivo("OT", d.numero, d.canal, d.cliente && d.cliente.razon_social, d.empresa, d.cotizacion);
   setTimeout(()=>{ window.print(); }, 200);
 }
 
