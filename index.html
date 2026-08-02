@@ -1138,10 +1138,11 @@ function docCotHTML(numero){
       </div>
       <div class="p-sec"><h4>Contacto</h4>
         <b>${capNombre($("razon").value)||"—"}</b><br>
-        Canal: ${nombreCanal(canalEfectivo())}<br>
-        ${$("contacto").value?"Contacto: "+capNombre($("contacto").value)+"<br>":""}
-        ${$("rut").value?"RUT: "+$("rut").value+"<br>":""}
-        ${$("tel").value?"Tel: "+$("tel").value+" · ":""}${$("correo").value||""}<br>
+        <b>Canal:</b> ${nombreCanal(canalEfectivo())}<br>
+        <b>Contacto:</b> ${capNombre($("contacto").value)}<br>
+        <b>RUT:</b> ${$("rut").value||""}<br>
+        <b>Tel:</b> ${$("tel").value||""}<br>
+        <b>Correo:</b> ${$("correo").value||""}<br>
         ${$("dir").value?"Dirección: "+$("dir").value:""}
       </div>
       <div class="p-sec"><h4>Detalle</h4>
@@ -1519,9 +1520,11 @@ async function imprimirOT(numero){
       </div>
       <div class="p-sec"><h4>Contacto</h4>
         <b>${capNombre(d.cliente.razon_social)||"—"}</b><br>
-        ${d.cliente.rut?"RUT: "+d.cliente.rut+"<br>":""}
-        ${d.cliente.contacto?"Contacto: "+capNombre(d.cliente.contacto)+"<br>":""}
-        ${d.cliente.telefono?"Tel: "+d.cliente.telefono+" · ":""}${d.cliente.correo||""}<br>
+        <b>Canal:</b> ${d.canal||""}<br>
+        <b>Contacto:</b> ${capNombre(d.cliente.contacto)}<br>
+        <b>RUT:</b> ${d.cliente.rut||""}<br>
+        <b>Tel:</b> ${d.cliente.telefono||""}<br>
+        <b>Correo:</b> ${d.cliente.correo||""}<br>
         ${d.cliente.direccion?"Dirección: "+d.cliente.direccion:""}
       </div>
       <div class="p-sec"><h4>Detalle del pedido</h4>
