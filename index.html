@@ -102,6 +102,9 @@
     .p-head .meta b{font-size:15px}
     .p-sec{margin-bottom:10px;line-height:1.3}
     .p-sec h4{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:2px}
+    table.p-client{border-collapse:collapse;margin-top:2px}
+    table.p-client td{padding:0 0 1px;vertical-align:top;line-height:1.3}
+    table.p-client td.lbl{font-weight:700;padding-right:6px;white-space:nowrap;width:1%}
     table.p-items{width:100%;border-collapse:collapse;font-size:12px}
     table.p-items th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#666;border-bottom:1px solid #161A20;padding:6px 4px}
     table.p-items td{padding:7px 4px;border-bottom:1px solid #eee;vertical-align:top}
@@ -164,6 +167,9 @@
   #prevDoc .p-head .meta b{font-size:15px}
   #prevDoc .p-sec{margin-bottom:10px;line-height:1.3}
   #prevDoc .p-sec h4{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:2px}
+  #prevDoc table.p-client{border-collapse:collapse;margin-top:2px}
+  #prevDoc table.p-client td{padding:0 0 1px;vertical-align:top;line-height:1.3}
+  #prevDoc table.p-client td.lbl{font-weight:700;padding-right:6px;white-space:nowrap;width:1%}
   #prevDoc table.p-items{width:100%;border-collapse:collapse;font-size:12px}
   #prevDoc table.p-items th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#666;border-bottom:1px solid #161A20;padding:6px 4px}
   #prevDoc table.p-items td{padding:7px 4px;border-bottom:1px solid #eee;vertical-align:top}
@@ -1138,12 +1144,14 @@ function docCotHTML(numero){
           Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
       </div>
       <div class="p-sec"><h4>Cliente</h4>
-        <b>${capNombre($("razon").value)||"—"}</b><br>
-        <b>Contacto:</b> ${capNombre($("contacto").value)}<br>
-        <b>RUT:</b> ${$("rut").value||""}<br>
-        <b>Tel:</b> ${$("tel").value||""}<br>
-        <b>Correo:</b> ${$("correo").value||""}<br>
-        ${$("dir").value?"Dirección: "+$("dir").value:""}
+        <b>${capNombre($("razon").value)||"—"}</b>
+        <table class="p-client">
+          <tr><td class="lbl">Contacto:</td><td>${capNombre($("contacto").value)}</td></tr>
+          <tr><td class="lbl">RUT:</td><td>${$("rut").value||""}</td></tr>
+          <tr><td class="lbl">Tel:</td><td>${$("tel").value||""}</td></tr>
+          <tr><td class="lbl">Correo:</td><td>${$("correo").value||""}</td></tr>
+          <tr><td class="lbl">Dirección:</td><td>${$("dir").value||""}</td></tr>
+        </table>
       </div>
       <div class="p-sec"><h4>Detalle</h4>
         <table class="p-items"><thead><tr><th class="it">Ítem</th><th>Descripción</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Subtotal</th></tr></thead>
@@ -1519,12 +1527,14 @@ async function imprimirOT(numero){
           Canal: ${d.canal} · ${d.comprobante}</div>
       </div>
       <div class="p-sec"><h4>Cliente</h4>
-        <b>${capNombre(d.cliente.razon_social)||"—"}</b><br>
-        <b>Contacto:</b> ${capNombre(d.cliente.contacto)}<br>
-        <b>RUT:</b> ${d.cliente.rut||""}<br>
-        <b>Tel:</b> ${d.cliente.telefono||""}<br>
-        <b>Correo:</b> ${d.cliente.correo||""}<br>
-        ${d.cliente.direccion?"Dirección: "+d.cliente.direccion:""}
+        <b>${capNombre(d.cliente.razon_social)||"—"}</b>
+        <table class="p-client">
+          <tr><td class="lbl">Contacto:</td><td>${capNombre(d.cliente.contacto)}</td></tr>
+          <tr><td class="lbl">RUT:</td><td>${d.cliente.rut||""}</td></tr>
+          <tr><td class="lbl">Tel:</td><td>${d.cliente.telefono||""}</td></tr>
+          <tr><td class="lbl">Correo:</td><td>${d.cliente.correo||""}</td></tr>
+          <tr><td class="lbl">Dirección:</td><td>${d.cliente.direccion||""}</td></tr>
+        </table>
       </div>
       <div class="p-sec"><h4>Detalle del pedido</h4>
         <table class="p-items"><thead><tr><th class="it">Ítem</th><th>Descripción</th><th class="num">Cant.</th><th class="num">Subtotal</th></tr></thead>
