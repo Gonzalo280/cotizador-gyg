@@ -41,21 +41,23 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
 - Perfiles: vendedores con nombre real (Roxana Gutiérrez S., Aranka Gutiérrez, Mario Yáñez). Cuentas susanbarczi@gmail.com, tai.gygimpresores y diseno.gygimpresores desactivadas (activo=false) hasta la etapa de producción.
 - Infraestructura: Claude Code conectado a Supabase con permiso de ESCRITURA. Regla vigente: toda escritura sigue el ciclo PRE → confirmación explícita del dueño → ejecución → POST.
 - 9 canales de venta: 10000 Santa Rosa, 20000 Rrss, 30000 Campaña volumen (electoral), 40000 Empresa, 50000 Mercado Público, 60000 Ecommerce Google, 70000 Gonzalo, 80000 Partner, 90000 Mercado Libre.
+- Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000), con precios idénticos por ahora (copia exacta). Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
 clientes (canal_codigo default 10000) · productos (metodo m2|unidad, config jsonb con 'minimo')
-producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna
-producto_costos · listas_precio (hoy solo id 1 'Principal') · terminaciones · producto_terminaciones
-cotizaciones (NO tiene canal_codigo todavía) · cotizacion_items (snapshots inmutables)
-ordenes_trabajo (canal_codigo, 8 estados) · ot_pagos · parametros (iva=0.19, margen_piso=30)
+producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna. Lista Empresa (id 2) es copia exacta de Principal (id 1): 148 filas cada una.
+producto_costos · listas_precio (columna canal_codigo, índice único — una lista por canal; hoy 2 filas: (1,'Principal',10000) y (2,'Empresa',40000)) · terminaciones · producto_terminaciones
+cotizaciones (columna canal_codigo NOT NULL default 10000; histórico previo quedó en 10000) · cotizacion_items (snapshots inmutables)
+ordenes_trabajo (canal_codigo, 8 estados) · ot_pagos · parametros (iva=0.19, margen_piso=30, tope_descuento_vendedor=10, minimo_cotizacion_40000=10000)
 profiles (rol admin|vendedor, activo, descuento_max, empresa_default)
 
 ## Trabajo pendiente (en orden)
-1. PASO 3 (rama y chat aparte): precios por canal + RPC canal-consciente. Dos mitades: (a) base de datos + motor, (b) frontend. Se hace (a) primero, se prueba, luego (b).
-2. Ajuste de precios lista Empresa (producto por producto, tras el Paso 3). Aquí se validan márgenes reales y se confirma el margen piso Empresa.
-3. Ítems compuestos / catálogo de párrafos (proyecto aparte).
-4. Merch de precio libre (después del cotizador paramétrico y del control de producción; requiere cargar SKU y costos del proveedor).
-5. Control de producción / ERP (módulos diseño, impresión, TAI sobre los 8 estados de OT).
+1. PASO 3 mitad (a): TERMINADA y en producción (motor canal-consciente, bloques 1-6, RPC `guardar_cotizacion` v2, mergeado en `main` vía PR #5). Pendiente: mitad (b), el frontend (rama `modulo-empresa-f2`, decisión cerrada: index único).
+2. Reclasificación de canal de clientes importados. Los 491 importados incluyen clientes de mesón (GyG) mezclados como canal 40000. Antes de bajar precios Empresa en F3, reclasificar a 10000 los que sean de mesón, según el análisis de facturas del dueño. Sin esto, F3 haría que clientes de mesón cobren precios Empresa rebajados.
+3. Ajuste de precios lista Empresa (producto por producto, tras el Paso 3). Aquí se validan márgenes reales y se confirma el margen piso Empresa.
+4. Ítems compuestos / catálogo de párrafos (proyecto aparte).
+5. Merch de precio libre (después del cotizador paramétrico y del control de producción; requiere cargar SKU y costos del proveedor).
+6. Control de producción / ERP (módulos diseño, impresión, TAI sobre los 8 estados de OT).
 
 Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y los entrega cuando corresponda.
 
@@ -73,3 +75,8 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 - Override de lista solo admin, validado en servidor; el servidor ignora cualquier canal que envíe un no-admin desde el navegador.
 - Solo se crea lista Empresa por ahora; otros canales se agregan después sin tocar el motor.
 - El índice único (producto_id, lista_precio_id, incluye_diseno) YA existe en producto_precios.
+- Piso de margen por canal: mecanismo implementado con fallback al global 30; la clave `margen_piso_40000` (20%) NO se siembra hasta F3.
+- Canal sin lista propia: cobra Santa Rosa (lista 1), no da error (opción A).
+- Error explícito solo si un producto no tiene precio en la lista resuelta (D5).
+- Mínimo de cotización Empresa $10.000: rechaza a no-admin, admin exento, sobre el neto post-descuento.
+- Frontend Empresa: INDEX ÚNICO (no archivo separado).
