@@ -1134,11 +1134,11 @@ function docCotHTML(numero){
           <span>${empresaSel().membrete2}</span>
         </div>
         <div class="meta"><b>${numero}</b><br>Fecha: ${fecha}<br>Vigencia: ${$("vig").value||15} días<br>
+          Canal: ${nombreCanal(canalEfectivo())}<br>
           Vendedor: ${(perfil&&perfil.nombre)||"—"}</div>
       </div>
-      <div class="p-sec"><h4>Contacto</h4>
+      <div class="p-sec"><h4>Cliente</h4>
         <b>${capNombre($("razon").value)||"—"}</b><br>
-        <b>Canal:</b> ${nombreCanal(canalEfectivo())}<br>
         <b>Contacto:</b> ${capNombre($("contacto").value)}<br>
         <b>RUT:</b> ${$("rut").value||""}<br>
         <b>Tel:</b> ${$("tel").value||""}<br>
@@ -1518,7 +1518,7 @@ async function imprimirOT(numero){
           <b>Entrega: ${d.fecha_entrega||"por definir"}${d.hora_entrega?" · "+d.hora_entrega:""}</b><br>
           Canal: ${d.canal} · ${d.comprobante}</div>
       </div>
-      <div class="p-sec"><h4>Contacto</h4>
+      <div class="p-sec"><h4>Cliente</h4>
         <b>${capNombre(d.cliente.razon_social)||"—"}</b><br>
         <b>Contacto:</b> ${capNombre(d.cliente.contacto)}<br>
         <b>RUT:</b> ${d.cliente.rut||""}<br>
