@@ -52,14 +52,25 @@ ordenes_trabajo (canal_codigo, 8 estados) · ot_pagos · parametros (iva=0.19, m
 profiles (rol admin|vendedor, activo, descuento_max, empresa_default)
 
 ## Trabajo pendiente (en orden)
-1. PASO 3 mitad (a): TERMINADA y en producción (motor canal-consciente, bloques 1-6, RPC `guardar_cotizacion` v2, mergeado en `main` vía PR #5). Pendiente: mitad (b), el frontend (rama `modulo-empresa-f2`, decisión cerrada: index único).
-2. Reclasificación de canal de clientes importados. Los 491 importados incluyen clientes de mesón (GyG) mezclados como canal 40000. Antes de bajar precios Empresa en F3, reclasificar a 10000 los que sean de mesón, según el análisis de facturas del dueño. Sin esto, F3 haría que clientes de mesón cobren precios Empresa rebajados.
-3. Ajuste de precios lista Empresa (producto por producto, tras el Paso 3). Aquí se validan márgenes reales y se confirma el margen piso Empresa.
-4. Ítems compuestos / catálogo de párrafos (proyecto aparte).
-5. Merch de precio libre (después del cotizador paramétrico y del control de producción; requiere cargar SKU y costos del proveedor).
-6. Control de producción / ERP (módulos diseño, impresión, TAI sobre los 8 estados de OT).
+PASO 3 COMPLETO (a+b) y en producción: motor canal-consciente (RPC `guardar_cotizacion` v2,
+bloques 1-6, mergeado vía PR #5) + frontend módulo Empresa F2 (canal visible en la cotización,
+override admin, listas por canal en vivo, mergeado vía PR #8) + presentación del documento
+pulida (sección "Cliente" con etiquetas en negrita siempre visibles alineadas en columna, canal
+movido a la cabecera, mergeado vía PR #9).
+
+1. Reclasificación de canal de clientes importados. Los 491 importados incluyen clientes de mesón (GyG) mezclados como canal 40000. Antes de bajar precios Empresa en F3, reclasificar a 10000 los que sean de mesón, según el análisis de facturas del dueño. Sin esto, F3 haría que clientes de mesón cobren precios Empresa rebajados.
+2. Ajuste de precios lista Empresa (producto por producto, tras el Paso 3). Aquí se validan márgenes reales y se confirma el margen piso Empresa.
+3. Ítems compuestos / catálogo de párrafos (proyecto aparte).
+4. Merch de precio libre (después del cotizador paramétrico y del control de producción; requiere cargar SKU y costos del proveedor).
+5. Control de producción / ERP (módulos diseño, impresión, TAI sobre los 8 estados de OT).
 
 Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y los entrega cuando corresponda.
+
+## Pendientes menores (post canal 40000)
+- Editor de ficha de cliente: hoy no existe forma de ver/corregir los datos de un cliente ya creado. Necesario antes de habilitar auto-completado.
+- Auto-completado de datos de cliente al generar OT: rellenar en la ficha los campos vacíos con lo que el vendedor escribe. POSPUESTO hasta que exista el editor de fichas (para poder corregir errores). Requiere escritura a la tabla clientes.
+- Bug conocido (no bug real): la OT muestra en blanco los campos de contacto que estén vacíos en la ficha del cliente. Es el comportamiento correcto mientras no exista el editor de fichas.
+- Colchón de hora de producción en la OT: mostrar hora de entrega al cliente + "listo en producción" una hora antes (colchón parametrizable). Decidido mostrar ambas horas, no restar oculto. Pendiente de implementar.
 
 ## Notas operativas
 - El dueño opera GitHub por web UI y ahora también por Code. No sabe git a nivel comandos: explicarle en lenguaje simple.
