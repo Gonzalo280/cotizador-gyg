@@ -245,13 +245,13 @@
     <section class="card">
       <h2><span class="n">1</span> Cliente</h2>
       <div class="body">
-        <div class="field" style="position:relative"><label>Cliente</label>
+        <div class="field" style="position:relative"><label>Razón social</label>
           <input id="cliBuscar" autocomplete="off" placeholder="Escribe para buscar… (o deja vacío para cliente nuevo)"
-                 oninput="filtrarClientes()" onfocus="filtrarClientes()">
+                 oninput="filtrarClientes()" onfocus="mostrarListaClientes()">
           <div id="cliLista" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35)"></div>
           <div id="cliHint" class="hint"></div>
         </div>
-        <div class="field"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="capInput(this); clienteSelId=null; render()"></div>
+        <div class="field" style="display:none"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="capInput(this); clienteSelId=null; render()"></div>
         <div class="grid2">
           <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="capInput(this); render()"></div>
           <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut(); render()"><div id="rutHint" class="hint"></div></div>
@@ -640,28 +640,49 @@ async function cargarClientes(){
 const _norm = s => (s||"").toString().toLowerCase()
   .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[.\-\s]/g,"");
 
-function filtrarClientes(){
-  const q = _norm($("cliBuscar").value);
-  const box = $("cliLista");
-  if(!q){ box.style.display="none"; clienteSelId=null; return; }
-  const hits = CLIENTES.filter(c =>
+function _hitsClientes(q){
+  return CLIENTES.filter(c =>
     _norm(c.razon_social).includes(q) ||
     _norm(c.rut).includes(q) ||
     _norm(c.nombre_contacto).includes(q)
   ).slice(0, 50);
-  if(!hits.length){
-    box.innerHTML = '<div style="padding:10px 12px;color:var(--ink-soft);font-size:13px">Sin coincidencias · se creará como cliente nuevo</div>';
-    box.style.display = "block";
-    clienteSelId = null;
-    return;
-  }
-  box.innerHTML = hits.map(c=>
+}
+
+function _renderListaClientes(hits){
+  const box = $("cliLista");
+  box.innerHTML = hits.length ? hits.map(c=>
     `<div onclick="seleccionarCliente(${c.id})" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line-soft);font-size:14px"
           onmouseover="this.style.background='var(--line-soft)'" onmouseout="this.style.background=''">
        <b>${c.razon_social||"—"}</b>${c.rut?` <span style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">· ${c.rut}</span>`:""}
        ${c.nombre_contacto?`<div style="font-size:12px;color:var(--ink-soft)">${c.nombre_contacto}</div>`:""}
-     </div>`).join("");
+     </div>`).join("")
+    : '<div style="padding:10px 12px;color:var(--ink-soft);font-size:13px">Sin coincidencias · se creará como cliente nuevo</div>';
   box.style.display = "block";
+}
+
+/* Solo foco: reabre la lista si ya hay texto. NUNCA toca clienteSelId ni razon
+   (evita pisar la razón social de un cliente ya elegido al volver a enfocar el buscador). */
+function mostrarListaClientes(){
+  const q = _norm($("cliBuscar").value);
+  if(!q) return;
+  _renderListaClientes(_hitsClientes(q));
+}
+
+/* Tipeo real: aquí sí se sincroniza razon con lo escrito, porque tipear desarma
+   la selección previa (el usuario está creando/editando un cliente nuevo). */
+function filtrarClientes(){
+  const q = _norm($("cliBuscar").value);
+  const box = $("cliLista");
+  if(!q){ box.style.display="none"; clienteSelId=null; $("razon").value=$("cliBuscar").value; return; }
+  const hits = _hitsClientes(q);
+  if(!hits.length){
+    _renderListaClientes(hits);
+    clienteSelId = null;
+    $("razon").value = $("cliBuscar").value;
+    return;
+  }
+  _renderListaClientes(hits);
+  if(clienteSelId===null) $("razon").value = $("cliBuscar").value;
 }
 
 function seleccionarCliente(id){
