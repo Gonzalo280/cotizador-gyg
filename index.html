@@ -260,7 +260,8 @@
           <div class="field"><label>Teléfono</label><input id="tel" autocomplete="off" placeholder="+56 9 ..."></div>
           <div class="field"><label>Correo</label><input id="correo" autocomplete="off" type="email" placeholder="cliente@correo.cl"></div>
         </div>
-        <div class="field"><label>Dirección</label><input id="dir" autocomplete="off" placeholder="Dirección de despacho"></div>
+        <div class="field"><label>Dirección</label><input id="dir" autocomplete="off" placeholder="Dirección"></div>
+        <div class="field"><label>Comuna</label><input id="comuna" autocomplete="off"></div>
         <div class="field"><label>Observaciones del cliente</label><textarea id="obsCli"></textarea></div>
       </div>
     </section>
@@ -628,7 +629,7 @@ let clienteSelId = null;   // id del cliente elegido en el desplegable (si lo ha
 
 async function cargarClientes(){
   const {data, error} = await sb.from("clientes")
-    .select("id,razon_social,nombre_contacto,rut,telefono,correo,direccion,canal_codigo")
+    .select("id,razon_social,nombre_contacto,rut,telefono,correo,direccion,comuna,canal_codigo")
     .order("razon_social");
   CLIENTES = (error || !data) ? [] : data;
   $("cliHint").textContent = CLIENTES.length + " clientes en la base";
@@ -675,6 +676,7 @@ function seleccionarCliente(id){
   $("tel").value      = c.telefono||"";
   $("correo").value   = c.correo||"";
   $("dir").value      = c.direccion||"";
+  $("comuna").value   = c.comuna||"";
   render();
 }
 
@@ -981,6 +983,7 @@ async function obtenerClienteId(){
     telefono:        $("tel").value.trim() || null,
     correo:          $("correo").value.trim() || null,
     direccion:       $("dir").value.trim() || null,
+    comuna:          $("comuna").value.trim() || null,
     observaciones:   $("obsCli").value.trim() || null
   }).select("id").single();
   if(error) throw new Error("No se pudo guardar el cliente: " + error.message);
@@ -1045,7 +1048,7 @@ async function guardar(){
 function limpiarFormulario(){
   items = [];
   clienteSelId = null;
-  ["cliBuscar","razon","contacto","rut","tel","correo","dir","obsCliente",
+  ["cliBuscar","razon","contacto","rut","tel","correo","dir","comuna","obsCli",
    "despacho","obsCot"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
   const disc=$("disc"); if(disc) disc.value = 0;      // descuento vuelve a 0
   const vig=$("vig");   if(vig)  vig.value  = 15;
@@ -1150,7 +1153,7 @@ function docCotHTML(numero){
           <tr><td class="lbl">RUT:</td><td>${$("rut").value||""}</td></tr>
           <tr><td class="lbl">Tel:</td><td>${$("tel").value||""}</td></tr>
           <tr><td class="lbl">Correo:</td><td>${$("correo").value||""}</td></tr>
-          <tr><td class="lbl">Dirección:</td><td>${$("dir").value||""}</td></tr>
+          <tr><td class="lbl">Dirección:</td><td>${$("dir").value||""}${$("comuna").value.trim() ? ", "+$("comuna").value.trim() : ""}</td></tr>
         </table>
       </div>
       <div class="p-sec"><h4>Detalle</h4>
