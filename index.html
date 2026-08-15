@@ -833,8 +833,6 @@ function calcItem(it){
   const tier = it.diseno?"con":"sin";
   const area = p.metodo==="m2" ? dec(it.ancho)*dec(it.alto) : 1;
   let unitPrint = p.metodo==="m2" ? area*p.precio[tier] : p.precio[tier];
-  // V4: mínimo comercial por producto (igual que el motor)
-  if(p.metodo==="m2" && p.minimo>0 && unitPrint<p.minimo) unitPrint = p.minimo;
   let unitCostP = p.metodo==="m2" ? area*p.costo[tier]  : p.costo[tier];
   let termPrice=0, termCost=0;
   const anchoCm = (p.metodo==="m2" ? dec(it.ancho) : 0) * 100;
@@ -861,7 +859,10 @@ function calcItem(it){
   }
   const cant=Number(it.cant)||0;
   const unitPrice=unitPrint+termPrice, unitCost=unitCostP+termCost;
-  return {area, cant, unitPrice, unitCost, subtotal:unitPrice*cant, costoTotal:unitCost*cant};
+  // Opción B: mínimo comercial sobre la LÍNEA completa (impresión+terminaciones)×cantidad
+  let subtotal = unitPrice*cant;
+  if(p.metodo==="m2" && p.minimo>0 && subtotal<p.minimo) subtotal = p.minimo;
+  return {area, cant, unitPrice, unitCost, subtotal, costoTotal:unitCost*cant};
 }
 function totals(){
   let netoBruto=0, costo=0;
