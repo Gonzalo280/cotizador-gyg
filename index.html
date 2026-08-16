@@ -482,7 +482,7 @@ async function cargarPerfil(){
   const {data:{user}} = await sb.auth.getUser();
   if(!user){ $("login").style.display="grid"; return; }
   const {data, error} = await sb.from("profiles")
-    .select("nombre, rol, descuento_max, empresa_default").eq("id", user.id).single();
+    .select("nombre, rol, descuento_max, empresa_default, telefono, vista_producto").eq("id", user.id).single();
   if(error || !data){
     $("loginErr").textContent="No se pudo cargar tu perfil. Avisa al administrador.";
     await sb.auth.signOut(); return;
@@ -517,7 +517,7 @@ let PRECIOS = {};    // F2 · C2: precios de TODAS las listas en memoria, indexa
 
 async function cargarCatalogo(){
   const [prods, precios, terms, pterms] = await Promise.all([
-    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden,config").eq("activo", true),
+    sb.from("productos").select("id,nombre,material,metodo,permite_terminaciones,permite_diseno,orden,ver_en,config").eq("activo", true),
     sb.from("producto_precios").select("producto_id,lista_precio_id,incluye_diseno,precio"),
     sb.from("terminaciones").select("id,nombre,precio,costo,tipo,dinamico,config"),
     sb.from("producto_terminaciones").select("producto_id,terminacion_id")
@@ -538,6 +538,7 @@ async function cargarCatalogo(){
     CATALOGO[p.id] = {nombre:p.nombre, material:p.material||"", metodo:p.metodo,
                       term:p.permite_terminaciones, permiteDiseno:p.permite_diseno!==false,
                       minimo:Number((p.config||{}).minimo)||0,   // V4: mínimo comercial por ítem
+                      verEn:(p.ver_en||'Ambos'),
                       orden:(p.orden==null?9999:p.orden), termIds:[], precio:{con:0,sin:0}, costo:{con:0,sin:0}};
   });
   // F2 · C2: precios por lista (se guardan TODAS, no solo la del canal actual)
@@ -580,6 +581,9 @@ async function cargarCatalogo(){
   sel.innerHTML = '<option value="">Seleccionar producto…</option>';
   Object.entries(CATALOGO)
     .sort((a,b)=> (a[1].orden - b[1].orden) || a[1].nombre.localeCompare(b[1].nombre, "es"))
+    .filter(([k,p]) => role==='admin' ? true
+           : perfil.vista_producto==='empresa' ? (p.verEn==='Empresa'||p.verEn==='Ambos')
+           : (p.verEn==='Santa Rosa'||p.verEn==='Ambos'))
     .forEach(([k,p])=>{ const o=document.createElement("option"); o.value=k; o.textContent=p.nombre; sel.appendChild(o); });
 }
 
@@ -1210,6 +1214,7 @@ function docCotHTML(numero){
           <div style="text-align:right">
             <b>${(perfil&&perfil.nombre)||""}</b><br>
             <span style="font-size:10px;color:#666">Ejecutivo/a de ventas</span>
+            ${perfil&&perfil.telefono ? '<br><span style="font-size:10px;color:#666">'+perfil.telefono.replace(/\n/g,'<br>')+'</span>' : ''}
           </div>
         </div>
       </div>
