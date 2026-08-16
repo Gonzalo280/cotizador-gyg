@@ -1,0 +1,38 @@
+-- ROLLBACK — revierte aplicado_2026-08-15_renombres_precios_orden.sql
+-- NO ejecutar salvo necesidad explícita del dueño.
+
+-- Revertir renombres
+UPDATE productos SET nombre='Pendón mayorista 1'            WHERE id=56;
+UPDATE productos SET nombre='Pendón mayorista 2'            WHERE id=58;
+UPDATE productos SET nombre='Roller 200 fondo prensa'        WHERE id=16;
+UPDATE productos SET nombre='Roller 250 fondo prensa'        WHERE id=34;
+UPDATE productos SET nombre='Roller 300 fondo prensa'        WHERE id=26;
+
+-- Revertir precios Santa Rosa (lista Principal id 1)
+UPDATE producto_precios SET precio=50000 WHERE producto_id=39 AND lista_precio_id=1;
+UPDATE producto_precios SET precio=35000 WHERE producto_id=42 AND lista_precio_id=1;
+
+-- Revertir orden al estado PRE exacto (incluye el hueco en 70 y los NULL en 73/74/75
+-- que existían antes de este cambio — ver PRE completo en el hilo de la sesión / commit).
+UPDATE productos SET orden = CASE id
+  WHEN 1  THEN 1  WHEN 70 THEN 2  WHEN 43 THEN 3  WHEN 23 THEN 4  WHEN 56 THEN 5
+  WHEN 58 THEN 6  WHEN 3  THEN 7  WHEN 35 THEN 8  WHEN 22 THEN 9  WHEN 59 THEN 10
+  WHEN 11 THEN 11 WHEN 31 THEN 12 WHEN 18 THEN 13 WHEN 36 THEN 14 WHEN 7  THEN 15
+  WHEN 17 THEN 16 WHEN 29 THEN 17 WHEN 60 THEN 18 WHEN 57 THEN 19 WHEN 10 THEN 20
+  WHEN 15 THEN 21 WHEN 30 THEN 22 WHEN 38 THEN 23 WHEN 20 THEN 24 WHEN 9  THEN 25
+  WHEN 5  THEN 26 WHEN 13 THEN 27 WHEN 16 THEN 28 WHEN 34 THEN 29 WHEN 26 THEN 30
+  WHEN 4  THEN 31 WHEN 48 THEN 32 WHEN 46 THEN 33 WHEN 44 THEN 34 WHEN 49 THEN 35
+  WHEN 45 THEN 36 WHEN 47 THEN 37 WHEN 50 THEN 38 WHEN 55 THEN 39 WHEN 51 THEN 40
+  WHEN 52 THEN 41 WHEN 53 THEN 42 WHEN 54 THEN 43 WHEN 21 THEN 44 WHEN 27 THEN 45
+  WHEN 32 THEN 46 WHEN 39 THEN 47 WHEN 42 THEN 48 WHEN 28 THEN 49 WHEN 25 THEN 50
+  WHEN 12 THEN 51 WHEN 8  THEN 52 WHEN 24 THEN 53 WHEN 37 THEN 54 WHEN 6  THEN 55
+  WHEN 14 THEN 56 WHEN 33 THEN 57 WHEN 19 THEN 58 WHEN 40 THEN 59 WHEN 41 THEN 60
+  WHEN 61 THEN 61 WHEN 62 THEN 62 WHEN 63 THEN 63 WHEN 64 THEN 64 WHEN 65 THEN 65
+  WHEN 66 THEN 66 WHEN 67 THEN 67 WHEN 68 THEN 68 WHEN 69 THEN 69 WHEN 71 THEN 71
+  WHEN 72 THEN 72
+  ELSE orden END
+WHERE id IN (1,70,43,23,56,58,3,35,22,59,11,31,18,36,7,17,29,60,57,10,15,30,38,20,9,
+  5,13,16,34,26,4,48,46,44,49,45,47,50,55,51,52,53,54,21,27,32,39,42,28,25,12,8,24,
+  37,6,14,33,19,40,41,61,62,63,64,65,66,67,68,69,71,72);
+
+UPDATE productos SET orden = NULL WHERE id IN (73,74,75);
