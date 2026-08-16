@@ -41,7 +41,7 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
 - Perfiles: vendedores con nombre real (Roxana Gutiérrez S., Aranka Gutiérrez, Mario Yáñez). Cuentas susanbarczi@gmail.com, tai.gygimpresores y diseno.gygimpresores desactivadas (activo=false) hasta la etapa de producción.
 - Infraestructura: Claude Code conectado a Supabase con permiso de ESCRITURA. Regla vigente: toda escritura sigue el ciclo PRE → confirmación explícita del dueño → ejecución → POST.
 - 9 canales de venta: 10000 Santa Rosa, 20000 Rrss, 30000 Campaña volumen (electoral), 40000 Empresa, 50000 Mercado Público, 60000 Ecommerce Google, 70000 Gonzalo, 80000 Partner, 90000 Mercado Libre.
-- Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000). DECISIÓN FIRME (F3): precios idénticos entre ambas listas, no solo "por ahora" — no habrá diferenciación de precio Empresa vs Santa Rosa. Parámetro `minimo_cotizacion_40000 = 10000`.
+- Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000). Regla general (F3): precios idénticos entre ambas listas. EXCEPCIÓN vigente (agosto 2026, confirmada por el dueño): productos id 20 (Tela PVC reverso negro: Santa Rosa $8.000 / Empresa $7.000) e id 42 (Gráfica Vehicular liso con memoria laminado: Santa Rosa $50.000 / Empresa $40.000) divergen por decisión explícita — no es un error, no igualar ni propagar un precio al otro sin instrucción del dueño. Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
 clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo')
@@ -68,11 +68,36 @@ basura id 374 eliminada. Respaldo para rollback: tabla `respaldo_reclasif_canal_
 F3 — AJUSTE DE COSTOS Y PRECIOS — COMPLETADO (agosto 2026): 52 costos actualizados a
 valores reales (venían de marzo). 2 precios Santa Rosa corregidos (id 20 Tela PVC
 reverso negro 7.000→8.000; id 42 ex "Rotulación Completa" 40.000→35.000). 8 productos
-renombrados. DECISIÓN FIRME: lista Empresa queda idéntica a Santa Rosa; margen piso
-30% parejo para todos los canales (se descartó el piso diferenciado 20%/25% para
-Empresa; no se sembró `margen_piso_40000`, el motor sigue cayendo al global 30%). El
-30% es el piso, no el margen real: los márgenes medidos en la lista van de 30,0% a
-82,7% según el producto. Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`.
+renombrados. DECISIÓN FIRME (vigente para margen): margen piso 30% parejo para todos
+los canales (se descartó el piso diferenciado 20%/25% para Empresa; no se sembró
+`margen_piso_40000`, el motor sigue cayendo al global 30%). El 30% es el piso, no el
+margen real: los márgenes medidos en la lista van de 30,0% a 82,7% según el producto.
+Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`. SUPERADO EN PARTE
+por el cambio de catálogo de agosto 2026 siguiente: la decisión de precios idénticos
+Empresa=Santa Rosa dejó de ser firme para los productos 20 y 42 (ver Estado actual).
+
+CATÁLOGO — RENOMBRES + PRECIOS SR + ORDEN DEL MENÚ — COMPLETADO (2026-08-15): paquete de
+3 bloques aplicado directo a producción con protocolo PRE/POST (sin rama, SQL de datos).
+(1) 5 renombres: productos 56 y 58 intercambian nombre cruzado ("Pendón mayorista 1" ↔
+"Pendón mayorista 2", posición en el menú también cruzada); rollers 16/34/26 pasan de
+"Roller N fondo prensa" a "Roller N fondo prensa 720 dpi". (2) Precios Santa Rosa (lista
+Principal, ambos tiers): id 39 de 50.000→70.000, id 42 de 35.000→50.000 (la lista Empresa
+de ambos NO se tocó, ver excepción arriba). (3) Reordenado completo del menú: los 74
+productos activos quedaron con `orden` 1..74 sin huecos ni duplicados (antes había un
+hueco en el valor 70 y los productos 73/74/75 tenían `orden=NULL`, no aparecían en el
+menú ordenado). Respaldos con PRE completo + rollback: `sql/catalogo-orden-nombres/`.
+
+CATÁLOGO — MÓDULO DE TERMINACIONES + "SOBRANTE 5 CM" — COMPLETADO (2026-08-15): creada
+terminación "Sobrante 5 cm por lado" (id 17, $0/$0) y vinculado el módulo completo de
+terminaciones (Sellado perimetral, Sobrante 7cm, Bolsillos+tubos, Ojetillos, Laminado
+mate/brillante, 2 bolsillos, Entrega en rollo, Sobrante 5cm — 9 en total) a 6 productos
+que lo tenían incompleto: Pendón tela PVC (1), Tela PVC monumental (70), Pendón
+mayorista 1/2 (56, 58), PVC Impreso (43), Gigantografía (23). Palomas (3, 35) y
+bastidores (22, 59) NO se tocaron. Orden de terminaciones en el frontend es por
+`terminacion_id` ascendente (`index.html`, `CATALOGO[k].termIds.sort((a,b)=>a-b)`), sin
+columna de orden dedicada — por eso "Sobrante 5 cm" (id 17) cae debajo de "Sobrante 7cm"
+(id 2) y "Entrega en rollo" (id 11) de forma automática. Respaldos:
+`sql/catalogo-modulo/`.
 
 UI MÓDULO CLIENTE — EN PRODUCCIÓN (PR #11): buscador "Cliente" pasó a etiqueta "Razón
 social" (el campo `razon` separado queda oculto en el DOM, sincronizado solo por
@@ -105,7 +130,7 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 
 ## Decisiones del Paso 3 (cerradas)
 - El canal nace en la cotización y lo trae el CLIENTE (su canal_codigo), no el selector "Emitir por". "Emitir por" (GyG/GDG) solo define membrete y banco del documento.
-- Lista Empresa (canal 40000): DECISIÓN FIRME (F3, agosto 2026) — queda idéntica a Santa Rosa, no se diferencia precio por canal.
+- Lista Empresa (canal 40000): regla general (F3, agosto 2026) — idéntica a Santa Rosa, no se diferencia precio por canal. EXCEPCIÓN confirmada agosto 2026: productos id 20 y 42 divergen por decisión explícita del dueño (ver Estado actual).
 - Mínimo por producto: $5.000 neto (ya aplicado). Mínimo por cotización Empresa: $10.000 neto (implementado en el Paso 3).
 - Margen piso: DECISIÓN FIRME (F3, agosto 2026) — 30% parejo para todos los canales. Se descartó el piso diferenciado 20%/25% para Empresa.
 - Terminaciones comparten precio entre canales.
