@@ -44,12 +44,12 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
 - Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000). Regla general (F3): precios idénticos entre ambas listas. EXCEPCIÓN vigente (agosto 2026, confirmada por el dueño): productos id 20 (Tela PVC reverso negro: Santa Rosa $8.000 / Empresa $7.000) e id 42 (Gráfica Vehicular liso con memoria laminado: Santa Rosa $50.000 / Empresa $40.000) divergen por decisión explícita — no es un error, no igualar ni propagar un precio al otro sin instrucción del dueño. Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
-clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo')
-producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna. Lista Empresa (id 2) es copia exacta de Principal (id 1): 148 filas cada una.
-producto_costos · listas_precio (columna canal_codigo, índice único — una lista por canal; hoy 2 filas: (1,'Principal',10000) y (2,'Empresa',40000)) · terminaciones · producto_terminaciones
+clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos')
+producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna. Lista Empresa (id 2) es copia de Principal (id 1) salvo EXCEPCIONES puntuales confirmadas por el dueño (ver Estado actual, productos 20 y 42).
+producto_costos · listas_precio (columna canal_codigo, índice único — una lista por canal; hoy 2 filas: (1,'Principal',10000) y (2,'Empresa',40000)) · terminaciones (tipo fija|unidad; config jsonb con 'por_m2' bool + 'minimo' propio cuando aplica, ej. laminados, Sellado perimetral, Cuerda perimetral) · producto_terminaciones
 cotizaciones (columna canal_codigo NOT NULL default 10000; histórico previo quedó en 10000) · cotizacion_items (snapshots inmutables)
 ordenes_trabajo (canal_codigo, 8 estados) · ot_pagos · parametros (iva=0.19, margen_piso=30, tope_descuento_vendedor=10, minimo_cotizacion_40000=10000)
-profiles (rol admin|vendedor, activo, descuento_max, empresa_default)
+profiles (rol admin|vendedor, activo, descuento_max, empresa_default, telefono text — se imprime en el pie del PDF bajo el nombre del ejecutivo, vista_producto text default 'santarosa' — filtro de catálogo para vendedores; el admin ve TODO el catálogo por rol, ignora esta columna)
 
 ## Trabajo pendiente (en orden)
 PASO 3 COMPLETO (a+b) y en producción: motor canal-consciente (RPC `guardar_cotizacion` v2,
@@ -75,6 +75,52 @@ margen real: los márgenes medidos en la lista van de 30,0% a 82,7% según el pr
 Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`. SUPERADO EN PARTE
 por el cambio de catálogo de agosto 2026 siguiente: la decisión de precios idénticos
 Empresa=Santa Rosa dejó de ser firme para los productos 20 y 42 (ver Estado actual).
+
+FIX MÍNIMO COMERCIAL — OPCIÓN B — COMPLETADO (2026-08-14, PR #13): bug detectado en el
+motor y el frontend — el mínimo comercial por producto ($5.000, columna
+`productos.config->>'minimo'`) se aplicaba al precio UNITARIO antes de multiplicar por
+cantidad, así que un ítem bajo el mínimo con cantidad>1 pagaba mínimo×cantidad en vez de
+mínimo una sola vez por la línea completa. Corregido en ambos lados: RPC
+`guardar_cotizacion` (aplicado directo a producción vía protocolo PRE/POST/rollback, sin
+branch de Supabase por no estar disponible `confirm_cost`; respaldo en `sql/fix-minimo/`)
+y frontend (`calcItem` en `index.html`, mismo PR). El mínimo ahora se evalúa sobre
+`(precio unitario + terminaciones) × cantidad`, ya redondeado. El mínimo PROPIO de
+terminaciones `por_m2` (laminados, Sellado perimetral, Cuerda perimetral) NO cambió —
+sigue siendo por m² del ítem, un concepto distinto, sin cantidad involucrada.
+
+VISIBILIDAD DE PRODUCTOS POR PERFIL + TELÉFONO DEL EJECUTIVO — COMPLETADO (2026-08-15/16,
+PR #16): columnas nuevas `profiles.telefono`, `profiles.vista_producto` (default
+'santarosa') y `productos.ver_en` (default 'Ambos'). El `<select>` de productos en
+`index.html` se filtra: admin ve TODO (sin usar `vista_producto`); vendedor con
+`vista_producto='empresa'` ve productos `ver_en IN ('Empresa','Ambos')`; el resto ve
+`ver_en IN ('Santa Rosa','Ambos')`. Hoy solo Javier Muñoz y el vendedor Gonzalo
+(`gerenciagonzalo28@gmail.com`) tienen `vista_producto='empresa'`; solo Malla Mesh (id 38)
+tiene `ver_en='Empresa'`. El pie del PDF imprime `perfil.telefono` bajo "Ejecutivo/a de
+ventas" (soporta 2 líneas separadas por `\n`, caso Aranka). De paso se renombró la cuenta
+admin (`eec14dbd-...`), que tenía `profiles.nombre` = su propio email — el pie del PDF
+usa `perfil.nombre`, así que antes imprimía el correo del admin en vez de un nombre.
+Respaldo: `sql/visibilidad-y-pie/`.
+
+CATÁLOGO — MALLA MESH (id 38) — COMPLETADO (2026-08-16, PR #17/#18): precio 9.000→7.000
+(ambas listas). Vinculado el módulo de Pendón tela PVC SIN laminados (terminaciones
+1,2,3,4,7). Bug encontrado y corregido en PR #18: `productos.permite_terminaciones`
+seguía en `false` — las terminaciones vinculadas en producto_terminaciones NO se
+mostraban en el frontend pese a estar bien cargadas en la base, porque el render
+(`index.html`, `CATALOGO[id].term`, al menos 5 puntos de uso) depende de esa columna
+como prerrequisito independiente, no solo de la tabla de relación. GOTCHA A RECORDAR:
+al vincular terminaciones a un producto, SIEMPRE verificar/activar
+`permite_terminaciones` — pasó una vez con Malla Mesh (bug real, corregido después) y se
+detectó a tiempo en id 20/74 durante el paquete de Cuerda perimetral (prerrequisito
+incluido en el mismo PR). Respaldo: `sql/malla-mesh/`.
+
+CATÁLOGO — CUERDA PERIMETRAL — COMPLETADO (2026-08-16, PR #19): nueva terminación
+"Cuerda perimetral" (id 18, tipo fija, `por_m2:true`, precio $500, costo $100, mínimo
+propio $500 — misma estructura que Sellado perimetral/laminados). Vinculada a 9
+productos: 1, 20, 23, 38, 43, 56, 58, 70, 74. Malla Mesh (38) sumó también "Sobrante 5cm"
+(17), quedando con 7 terminaciones. Productos 20 y 74 completaron el módulo entero
+(sumaron 11 "Entrega en rollo" y 17 "Sobrante 5cm", con `permite_terminaciones` activado
+como prerrequisito) — quedaron con 10 terminaciones cada uno, igual que 1/23/43/56/58/70.
+Respaldo: `sql/cuerda-perimetral/`.
 
 CATÁLOGO — RENOMBRES + PRECIOS SR + ORDEN DEL MENÚ — COMPLETADO (2026-08-15): paquete de
 3 bloques aplicado directo a producción con protocolo PRE/POST (sin rama, SQL de datos).
@@ -127,6 +173,8 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 - El dueño opera GitHub por web UI y ahora también por Code. No sabe git a nivel comandos: explicarle en lenguaje simple.
 - Tras cada deploy, el equipo debe hacer Ctrl+Shift+R (caché del navegador).
 - Error conocido en Excel histórico de costos: usa plancha 2.88 m²; el valor correcto es 1.22×2.44 = 2.9768 m². No propagarlo.
+- GOTCHA catálogo de terminaciones: vincular filas en `producto_terminaciones` NO alcanza para que se vean en el frontend. `productos.permite_terminaciones` es un prerrequisito aparte (booleano en `productos`, no en la tabla de relación) — si está en `false`, el ítem no muestra ninguna terminación aunque tenga 10 vinculadas. Verificar siempre las dos cosas juntas.
+- El MCP de Supabase (`mcp__supabase__*`) a veces no queda conectado al iniciar una sesión nueva de Claude Code aunque `.mcp.json` y `SUPABASE_ACCESS_TOKEN` estén bien — usar `/mcp` para reconectar antes de asumir que hay que reconfigurar algo.
 
 ## Decisiones del Paso 3 (cerradas)
 - El canal nace en la cotización y lo trae el CLIENTE (su canal_codigo), no el selector "Emitir por". "Emitir por" (GyG/GDG) solo define membrete y banco del documento.
