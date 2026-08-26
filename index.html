@@ -1032,8 +1032,9 @@ function filasHTML(it, p, tids){
 
 function render(){
   aplicarListaActiva();   // F2: la lista de precios sigue al canal activo antes de pintar nada
-  // B7: contador de ítems en el recuadro negro
-  const _n = items.length;
+  // B7: contador de ítems en el recuadro negro — cuenta LÍNEAS finales (1 por ítem simple,
+  // N por ítem con multi-medida activa), igual que construirItemsPayload() y docCotHTML()
+  const _n = items.reduce((sum,it)=> sum + ((it.multi && it.rows && it.rows.length) ? it.rows.length : 1), 0);
   $("cotNum").textContent = (numeroActual || "COT · se asigna al guardar")
     + (_n ? "  ·  " + _n + (_n===1 ? " ítem" : " ítems") : "");
   $("items").innerHTML = items.length ? items.map(itemHTML).join("") : `<div class="empty">Sin productos. Agrega uno arriba.</div>`;
