@@ -14,7 +14,7 @@ Productos: gigantografías, pendones, rollers, branding vehicular, letreros, adh
 URL producción: https://cotizador1.vercel.app
 
 ## Arquitectura
-- Frontend: UN archivo `index.html` (~1.460 líneas). HTML+CSS+JS vanilla. Sin framework, sin build.
+- Frontend: UN archivo `index.html` (~1.710 líneas). HTML+CSS+JS vanilla. Sin framework, sin build.
 - Backend: Supabase (Postgres + Auth + RLS + RPCs). Project ref: tcruyggneptjmrmjfcqq
 - Deploy: Vercel conectado a GitHub (Gonzalo280/cotizador-gyg). Push a main = producción. Push a rama = preview.
 - PDF: window.print() con bloque @media print. Sin librerías.
@@ -35,13 +35,17 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
 7. El arquitecto del proyecto es un chat web separado. Este entorno (Claude Code) es el EJECUTOR: recibe instrucciones acotadas y las ejecuta. Si una instrucción parece incompleta o riesgosa, detenerse y avisar.
 
 ## Estado actual (agosto 2026)
-- En producción: cotizador Santa Rosa completo + B7 (previsualización, numeración de ítems, columna Ítem en PDF, toggle de pago, bordes) + B8 (cabecera compacta, totales angostos, "Datos para transferencia", pie anclado al fondo, aviso de segunda hoja sobre 12 ítems) + módulo Empresa F2/F3 (ver Trabajo pendiente) + UI Cliente con Razón social/Comuna (PR #11).
+- En producción: cotizador Santa Rosa completo + B7 (previsualización, numeración de ítems, columna Ítem en PDF, toggle de pago, bordes) + B8 (cabecera compacta, totales angostos, "Datos para transferencia", pie anclado al fondo, aviso de segunda hoja sobre 12 ítems) + módulo Empresa F2/F3 (ver Trabajo pendiente) + UI Cliente con Razón social/Comuna (PR #11) + F4 Bloque 1 multi-medida (PR #21, ver Trabajo pendiente).
 - Base de datos: catálogo de 8 categorías, ~146 precios en la única lista `Principal` (id 1), copiados a `Empresa` (id 2). 552 clientes reclasificados por canal: 442 en 10000 (Santa Rosa/mesón), 103 en 40000 (Empresa), 7 en 50000 (Mercado Público). Respaldo de la reclasificación en `respaldo_reclasif_canal_2026`.
-- Catálogo: los 33 productos m² activos tienen mínimo comercial de $5.000 neto. F3 (agosto 2026) actualizó 52 costos a valores reales (venían de marzo), 2 precios Santa Rosa (id 20 y 42) y 8 nombres de producto. Costo único por producto, no varía por canal ni por diseño (el diseño se cobra como ítem aparte). Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`.
+- Catálogo: 87 productos activos (74 → 87 tras el alta F4 del 2026-08-31, ver Trabajo pendiente). Los 37 productos m² activos tienen mínimo comercial de $5.000 neto, EXCEPCIÓN id 56 "Pendón mayorista 2" (mínimo $3.000, decisión del dueño 2026-08-31). F3 (agosto 2026) actualizó 52 costos a valores reales (venían de marzo), 2 precios Santa Rosa (id 20 y 42) y 8 nombres de producto. Costo único por producto, no varía por canal ni por diseño (el diseño se cobra como ítem aparte). Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`.
 - Perfiles: vendedores con nombre real (Roxana Gutiérrez S., Aranka Gutiérrez, Mario Yáñez). Cuentas susanbarczi@gmail.com, tai.gygimpresores y diseno.gygimpresores desactivadas (activo=false) hasta la etapa de producción.
 - Infraestructura: Claude Code conectado a Supabase con permiso de ESCRITURA. Regla vigente: toda escritura sigue el ciclo PRE → confirmación explícita del dueño → ejecución → POST.
 - 9 canales de venta: 10000 Santa Rosa, 20000 Rrss, 30000 Campaña volumen (electoral), 40000 Empresa, 50000 Mercado Público, 60000 Ecommerce Google, 70000 Gonzalo, 80000 Partner, 90000 Mercado Libre.
-- Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000). Regla general (F3): precios idénticos entre ambas listas. EXCEPCIÓN vigente (agosto 2026, confirmada por el dueño): productos id 20 (Tela PVC reverso negro: Santa Rosa $8.000 / Empresa $7.000) e id 42 (Gráfica Vehicular liso con memoria laminado: Santa Rosa $50.000 / Empresa $40.000) divergen por decisión explícita — no es un error, no igualar ni propagar un precio al otro sin instrucción del dueño. Parámetro `minimo_cotizacion_40000 = 10000`.
+- Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000). Regla general (F3): precios idénticos entre ambas listas. EXCEPCIONES vigentes (confirmadas por el dueño), divergen por decisión explícita — no es un error, no igualar ni propagar un precio al otro sin instrucción del dueño:
+  - id 20 Tela PVC reverso negro: Santa Rosa $8.000 / Empresa $7.000 (agosto 2026)
+  - id 39 Gráfica Vehicular avery sin memoria laminado: Santa Rosa $70.000 / Empresa $50.000 (confirmada 2026-08-31)
+  - id 42 Gráfica Vehicular liso con memoria laminado: Santa Rosa $50.000 / Empresa $40.000 (agosto 2026)
+  Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
 clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos')
@@ -57,6 +61,70 @@ bloques 1-6, mergeado vía PR #5) + frontend módulo Empresa F2 (canal visible e
 override admin, listas por canal en vivo, mergeado vía PR #8) + presentación del documento
 pulida (sección "Cliente" con etiquetas en negrita siempre visibles alineadas en columna, canal
 movido a la cabecera, mergeado vía PR #9).
+
+F4 · BLOQUE 1 — MULTI-MEDIDA — EN PRODUCCIÓN (2026-08-31, PR #21): botón "Cargar varias
+medidas" en los productos m². Captura N filas (ancho / alto / cantidad / terminaciones /
+descripción por fila) dentro de un solo ítem visual y las expande a N ítems normales recién
+al construir el payload — el RPC `guardar_cotizacion` NO cambia y no se entera. Solo aplica
+a método m² (no a 'unidad'). La fila nueva copia la anterior (decisión del dueño). El
+contador del recuadro-resumen ahora cuenta líneas reales (1 por ítem simple +
+`it.rows.length` por ítem multi), coincide con lo que se guarda e imprime. El bloque de
+payload estaba DUPLICADO en `guardar()` y `guardarYGenerarOT()` — se factorizó en
+`construirPayload()` / `construirItemsPayload()` / `construirLineaPayload()`, punto único
+para ambos flujos. De paso: se ocultó el checkbox "Incluye diseño" en TODOS los productos
+(ítem simple y filas multi); `incluye_diseno` queda fijo en `false` en el frontend porque el
+diseño se cobra como producto aparte (categoría Servicios) — el RPC no se tocó. PDF de
+cotización compactado (padding/márgenes en `@media print` y su copia `#prevDoc`) para que
+quepan más ítems por hoja. F4 es fase del arquitecto (chat web separado), no documentada en
+detalle acá.
+
+AJUSTE DE PRECIOS PUNTUAL — APLICADO Y VERIFICADO EN PRODUCCIÓN (2026-08-31, SQL de datos
+sin rama): Empavonado (id 15) $20.000 → $25.000 (margen 46,5%); Decoración Oficina Duster
+(id 7) $25.000 → $30.000 (margen 49,8%); Pendón mayorista 2 (id 56) precio $5.500 → $5.000
+y mínimo propio $5.000 → $3.000 (margen 60,5%). Todos en AMBAS listas (Principal = Empresa),
+todos sobre el piso 30%.
+
+ALTA DE 13 PRODUCTOS (F4) + REORDEN GLOBAL A 87 — APLICADO EN PRODUCCIÓN (2026-08-31, SQL de
+datos sin rama, protocolo PRE → PASO 1/2/3 con OK del arquitecto entre cada paso).
+13 productos nuevos, ids 76-88 (secuencia `productos_id_seq`):
+- Armados: 76 "Bastidor de fierro 20/30 en 1,5mm", 77 "Bastidor de fierro 20/20 en 1,5mm" (m²).
+- Servicios: 78 "Servicio plóter de corte — estándar", 79 "Servicio plóter de corte — volumen" (m²).
+- Dispositivos: 80/81/82 "Pendón Roller 100/90/80x200 720dpi (promocional)" (unidad);
+  83-88 bloque Araña: "Panel Araña 4/3/2 cuerpos" + "Tela Display Araña 4/3/2 cuerpos" (unidad).
+Reglas de los 13: `ver_en='Ambos'`, `permite_diseno=false`, `permite_terminaciones=false`,
+`config='{"minimo":5000}'` solo en los m² (los de unidad `{}`). 1 fila `producto_costos`
+(`incluye_diseno=false`) + 2 filas `producto_precios` (listas 1 y 2, mismo precio, regla F3).
+Márgenes `(precio-costo)/precio` TODOS verificados sobre el piso 30%, el más ajustado es el
+par Araña 4 cuerpos con 35,5%. Reorden: el menú pasó de 74 a 87 productos, `orden` 1..87 sin
+huecos ni duplicados; los 74 originales conservaron su orden relativo, los 13 nuevos
+intercalados por categoría (fierros en 11-12, plóter de corte en 55-56, rollers promo en
+61-63, bloque Araña en 67-72). Detalle en `memory/alta-f4-13-productos.md`.
+
+DIAGNÓSTICO OT DIRECTA — CERRADO, NO ERA BUG (2026-08-28, solo lectura): duda de si
+"Previsualizar y generar OT" deja la cotización registrada. `guardarYGenerarOT()`
+(index.html) SIEMPRE llama a `rpc("guardar_cotizacion")` PRIMERO — emite el correlativo y
+devuelve el número — y recién después abre el modal de OT, cuya confirmación llama
+`rpc("generar_ot", {cotizacion_numero})`. No hay ruta que cree una OT sin cotización de
+respaldo: 0 OT huérfanas de 61. El "a veces no se ve en historial" NO es pérdida de datos:
+es RLS. La política de `cotizaciones` es `(vendedor_id = auth.uid()) OR es_admin()` — cada
+vendedor ve SOLO sus cotizaciones en el historial; `ordenes_trabajo` en cambio tiene lectura
+abierta a todos, así que una OT puede aparecer en "Ver OTs" mientras su cotización no está en
+el historial del usuario que mira. Agrava: el dueño tiene DOS perfiles con el mismo nombre
+(`gonsalsa69@yahoo.es` admin ve todo / `gerenciagonzalo28@gmail.com` vendedor ve solo lo
+suyo). Comportamiento por diseño.
+
+DECISIONES TOMADAS, PENDIENTES DE EJECUTAR (chat de motor / RLS / perfiles — no ejecutar sin
+instrucción acotada del arquitecto):
+- Consolidar las cuentas del dueño: `gerenciagonzalo28` pasa a admin; `gonsalsa69` se
+  desactiva. El dueño reseteará OT y cotizaciones en unos días, así que la visibilidad de las
+  cotizaciones viejas de `gonsalsa69` no complica la migración.
+- Visibilidad de cotizaciones: se MANTIENE "cada vendedor ve solo las suyas" (decisión firme,
+  no abrir a todos).
+- Javier ve TODOS los clientes (se mantiene, NO se filtra la lista de clientes por canal).
+- Técnicos abiertos: `margen_piso_40000` no existe (Empresa usa el piso global 30%);
+  fallback silencioso a lista Santa Rosa en el RPC cuando el canal no tiene lista propia
+  (discrepa con la Decisión D5 del DOC-3); selector de canal al crear cliente; ajustes de
+  terminaciones; anular / editar cotización.
 
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
@@ -178,7 +246,7 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 
 ## Decisiones del Paso 3 (cerradas)
 - El canal nace en la cotización y lo trae el CLIENTE (su canal_codigo), no el selector "Emitir por". "Emitir por" (GyG/GDG) solo define membrete y banco del documento.
-- Lista Empresa (canal 40000): regla general (F3, agosto 2026) — idéntica a Santa Rosa, no se diferencia precio por canal. EXCEPCIÓN confirmada agosto 2026: productos id 20 y 42 divergen por decisión explícita del dueño (ver Estado actual).
+- Lista Empresa (canal 40000): regla general (F3, agosto 2026) — idéntica a Santa Rosa, no se diferencia precio por canal. EXCEPCIONES confirmadas por el dueño: productos id 20 y 42 (agosto 2026) e id 39 (2026-08-31) divergen por decisión explícita (ver Estado actual).
 - Mínimo por producto: $5.000 neto (ya aplicado). Mínimo por cotización Empresa: $10.000 neto (implementado en el Paso 3).
 - Margen piso: DECISIÓN FIRME (F3, agosto 2026) — 30% parejo para todos los canales. Se descartó el piso diferenciado 20%/25% para Empresa.
 - Terminaciones comparten precio entre canales.
