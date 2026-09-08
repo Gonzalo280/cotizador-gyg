@@ -719,17 +719,16 @@ function seleccionarCliente(id){
   render();
 }
 
-/* F4 · canal-cliente: desarmar la selección de un cliente existente para volver a "cliente
-   nuevo". Re-habilita el selector de canal SIEMPRE, y solo lo devuelve a Santa Rosa (10000)
-   en la transición desde un cliente existente (cc.disabled venía en true). Si el vendedor
-   ya estaba en modo cliente nuevo y eligió "Empresa" a mano, no se le pisa. */
+/* F4 · canal-cliente: desarmar la selección de cliente para volver a "cliente nuevo".
+   Decisión firme: al dejar de tener un cliente seleccionado (editar razón social o RUT,
+   vaciar el buscador) el selector SIEMPRE vuelve a Santa Rosa (10000) y queda editable.
+   El vendedor que quiera Empresa lo elige al final, sobre el cliente ya escrito. */
 function desarmarSeleccionCliente(){
   clienteSelId = null;
   const cc=document.getElementById("canalCliente");
   if(cc){
-    const veniaBloqueado = cc.disabled;
     cc.disabled = false;
-    if(veniaBloqueado) cc.value = "10000";
+    cc.value = "10000";
   }
 }
 
