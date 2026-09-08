@@ -34,11 +34,11 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
 6. No tomar decisiones de arquitectura por cuenta propia. Ante ambigüedad: preguntar al dueño.
 7. El arquitecto del proyecto es un chat web separado. Este entorno (Claude Code) es el EJECUTOR: recibe instrucciones acotadas y las ejecuta. Si una instrucción parece incompleta o riesgosa, detenerse y avisar.
 
-## Estado actual (agosto 2026)
-- En producción: cotizador Santa Rosa completo + B7 (previsualización, numeración de ítems, columna Ítem en PDF, toggle de pago, bordes) + B8 (cabecera compacta, totales angostos, "Datos para transferencia", pie anclado al fondo, aviso de segunda hoja sobre 12 ítems) + módulo Empresa F2/F3 (ver Trabajo pendiente) + UI Cliente con Razón social/Comuna (PR #11) + F4 Bloque 1 multi-medida (PR #21, ver Trabajo pendiente).
+## Estado actual (septiembre 2026)
+- En producción: cotizador Santa Rosa completo + B7 (previsualización, numeración de ítems, columna Ítem en PDF, toggle de pago, bordes) + B8 (cabecera compacta, totales angostos, "Datos para transferencia", pie anclado al fondo, aviso de segunda hoja sobre 12 ítems) + módulo Empresa F2/F3 (ver Trabajo pendiente) + UI Cliente con Razón social/Comuna (PR #11) + F4 Bloque 1 multi-medida (PR #21) + F4 selector de canal al crear cliente (PR #23) + frente MOTOR/RLS/PERFILES cerrado (ver Trabajo pendiente).
 - Base de datos: catálogo de 8 categorías, ~146 precios en la única lista `Principal` (id 1), copiados a `Empresa` (id 2). 552 clientes reclasificados por canal: 442 en 10000 (Santa Rosa/mesón), 103 en 40000 (Empresa), 7 en 50000 (Mercado Público). Respaldo de la reclasificación en `respaldo_reclasif_canal_2026`.
 - Catálogo: 87 productos activos (74 → 87 tras el alta F4 del 2026-08-31, ver Trabajo pendiente). Los 37 productos m² activos tienen mínimo comercial de $5.000 neto, EXCEPCIÓN id 56 "Pendón mayorista 2" (mínimo $3.000, decisión del dueño 2026-08-31). F3 (agosto 2026) actualizó 52 costos a valores reales (venían de marzo), 2 precios Santa Rosa (id 20 y 42) y 8 nombres de producto. Costo único por producto, no varía por canal ni por diseño (el diseño se cobra como ítem aparte). Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`.
-- Perfiles: vendedores con nombre real (Roxana Gutiérrez S., Aranka Gutiérrez, Mario Yáñez). Cuentas susanbarczi@gmail.com, tai.gygimpresores y diseno.gygimpresores desactivadas (activo=false) hasta la etapa de producción.
+- Perfiles: vendedores con nombre real (Roxana Gutiérrez S., Aranka Gutiérrez, Mario Yáñez). Cuentas susanbarczi@gmail.com, tai.gygimpresores y diseno.gygimpresores desactivadas (activo=false) hasta la etapa de producción. El dueño tiene DOS cuentas ACTIVAS con roles distintos: `gonsalsa69@yahoo.es` (uid `eec14dbd…`, ÚNICO admin, `descuento_max=100`, `profiles.nombre` = "Gonzalo Gutiérrez S." desde 2026-09-08) y `gerenciagonzalo28@gmail.com` (uid `9a1831d3…`, vendedor, tope 10, sigue como "Luis Gonzalo Gutiérrez Solar"). Gonzalo cotiza como `gonsalsa69` cuando necesita descuentos > 10%. NO se consolidaron ni desactivaron — ver frente MOTOR/RLS/PERFILES en Trabajo pendiente.
 - Infraestructura: Claude Code conectado a Supabase con permiso de ESCRITURA. Regla vigente: toda escritura sigue el ciclo PRE → confirmación explícita del dueño → ejecución → POST.
 - 9 canales de venta: 10000 Santa Rosa, 20000 Rrss, 30000 Campaña volumen (electoral), 40000 Empresa, 50000 Mercado Público, 60000 Ecommerce Google, 70000 Gonzalo, 80000 Partner, 90000 Mercado Libre.
 - Listas de precio: `Principal` (id 1, canal 10000) y `Empresa` (id 2, canal 40000). Regla general (F3): precios idénticos entre ambas listas. EXCEPCIONES vigentes (confirmadas por el dueño), divergen por decisión explícita — no es un error, no igualar ni propagar un precio al otro sin instrucción del dueño:
@@ -48,12 +48,12 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
   Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
-clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos')
+clientes (canal_codigo default 10000, comuna text — el canal se elige en el alta de cliente nuevo con el selector del módulo 1 y viaja en el INSERT de `obtenerClienteId()`; el default 10000 es solo respaldo. RLS abierta: cualquier perfil activo ve/edita todos los clientes, sin filtro por canal) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos')
 producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna. Lista Empresa (id 2) es copia de Principal (id 1) salvo EXCEPCIONES puntuales confirmadas por el dueño (ver Estado actual, productos 20 y 42).
 producto_costos · listas_precio (columna canal_codigo, índice único — una lista por canal; hoy 2 filas: (1,'Principal',10000) y (2,'Empresa',40000)) · terminaciones (tipo fija|unidad; config jsonb con 'por_m2' bool + 'minimo' propio cuando aplica, ej. laminados, Sellado perimetral, Cuerda perimetral) · producto_terminaciones
 cotizaciones (columna canal_codigo NOT NULL default 10000; histórico previo quedó en 10000) · cotizacion_items (snapshots inmutables)
 ordenes_trabajo (canal_codigo, 8 estados) · ot_pagos · parametros (iva=0.19, margen_piso=30, tope_descuento_vendedor=10, minimo_cotizacion_40000=10000)
-profiles (rol admin|vendedor, activo, descuento_max, empresa_default, telefono text — se imprime en el pie del PDF bajo el nombre del ejecutivo, vista_producto text default 'santarosa' — filtro de catálogo para vendedores; el admin ve TODO el catálogo por rol, ignora esta columna)
+profiles (rol admin|vendedor, activo, descuento_max, empresa_default, nombre text — se imprime en el pie del PDF como Ejecutivo de ventas (el dueño tiene dos filas activas, ver "Perfiles" en Estado actual), telefono text — se imprime en el pie del PDF bajo el nombre del ejecutivo, vista_producto text default 'santarosa' — filtro de catálogo para vendedores; el admin ve TODO el catálogo por rol, ignora esta columna)
 
 ## Trabajo pendiente (en orden)
 PASO 3 COMPLETO (a+b) y en producción: motor canal-consciente (RPC `guardar_cotizacion` v2,
@@ -109,22 +109,77 @@ respaldo: 0 OT huérfanas de 61. El "a veces no se ve en historial" NO es pérdi
 es RLS. La política de `cotizaciones` es `(vendedor_id = auth.uid()) OR es_admin()` — cada
 vendedor ve SOLO sus cotizaciones en el historial; `ordenes_trabajo` en cambio tiene lectura
 abierta a todos, así que una OT puede aparecer en "Ver OTs" mientras su cotización no está en
-el historial del usuario que mira. Agrava: el dueño tiene DOS perfiles con el mismo nombre
-(`gonsalsa69@yahoo.es` admin ve todo / `gerenciagonzalo28@gmail.com` vendedor ve solo lo
-suyo). Comportamiento por diseño.
+el historial del usuario que mira. Agrava: el dueño tiene DOS cuentas — `gonsalsa69@yahoo.es`
+(admin, ve todo) y `gerenciagonzalo28@gmail.com` (vendedor, ve solo lo suyo). En agosto 2026
+ambos perfiles se llamaban igual ("Luis Gonzalo Gutiérrez Solar"); el 2026-09-08 se renombró
+`gonsalsa69` a "Gonzalo Gutiérrez S." (ver frente MOTOR/RLS/PERFILES). Comportamiento por diseño.
 
-DECISIONES TOMADAS, PENDIENTES DE EJECUTAR (chat de motor / RLS / perfiles — no ejecutar sin
-instrucción acotada del arquitecto):
-- Consolidar las cuentas del dueño: `gerenciagonzalo28` pasa a admin; `gonsalsa69` se
-  desactiva. El dueño reseteará OT y cotizaciones en unos días, así que la visibilidad de las
-  cotizaciones viejas de `gonsalsa69` no complica la migración.
-- Visibilidad de cotizaciones: se MANTIENE "cada vendedor ve solo las suyas" (decisión firme,
-  no abrir a todos).
-- Javier ve TODOS los clientes (se mantiene, NO se filtra la lista de clientes por canal).
-- Técnicos abiertos: `margen_piso_40000` no existe (Empresa usa el piso global 30%);
-  fallback silencioso a lista Santa Rosa en el RPC cuando el canal no tiene lista propia
-  (discrepa con la Decisión D5 del DOC-3); selector de canal al crear cliente; ajustes de
-  terminaciones; anular / editar cotización.
+FRENTE MOTOR / RLS / PERFILES — CERRADO (2026-09-08). Reemplaza el bloque previo "DECISIONES
+TOMADAS, PENDIENTES DE EJECUTAR" (la consolidación de cuentas que ahí figuraba se DESCARTÓ).
+
+1. PERFILES — Fase 1, HECHO. `gonsalsa69@yahoo.es` (uid `eec14dbd…`, admin, `descuento_max=100`)
+   se renombró de "Luis Gonzalo Gutiérrez Solar" a "Gonzalo Gutiérrez S." para romper el empate
+   de nombre con `gerenciagonzalo28@gmail.com` (uid `9a1831d3…`, vendedor, tope 10), que
+   confundía a Claude Code. Ambas cuentas quedan ACTIVAS. NO se consolidó ni desactivó nada:
+   `gonsalsa69` sigue siendo el único admin, `gerenciagonzalo28` sigue vendedor. Gonzalo cotiza
+   como `gonsalsa69` cuando necesita descuentos > 10%. Consecuencia: el pie de PDF de las
+   cotizaciones emitidas por `gonsalsa69` ahora imprime "Gonzalo Gutiérrez S." (`profiles.nombre`
+   sale como Ejecutivo de ventas).
+
+2. RLS — Fase 2, VERIFICADA por lectura, SIN cambios. La RLS es REAL (server-side), no cosmética:
+   · `cotizaciones`: `(vendedor_id = auth.uid()) OR es_admin()`
+   · `cotizacion_items`: cascada por la cotización madre (mismo criterio vía EXISTS)
+   · `ordenes_trabajo` y `ot_pagos`: SELECT abierto a todo autenticado (`true`); sin política de
+     escritura (solo el RPC SECURITY DEFINER escribe)
+   · `clientes`: cualquier perfil activo ve/edita todos, sin filtro por canal → Javier ve todos
+     los clientes, como se requiere
+   Modelo confirmado: vendedor ve SOLO sus cotizaciones y TODAS las OT; admin ve todo. RLS
+   activada en las 5 tablas, sin FORCE. Visibilidad de cotizaciones "cada vendedor ve solo las
+   suyas" = decisión firme, no se abre a todos.
+
+3. FALLBACK DE CANAL — Fase 3, DECISIÓN FIRME, no se tocó el RPC. Se MANTIENE el fallback
+   silencioso a Santa Rosa: `guardar_cotizacion` bloque M3 resuelve "canal sin lista propia →
+   usa lista del canal 10000, sin error" (Opción A). Se DESCARTÓ la Opción B (excepción
+   explícita) que planteaba el DOC-3 D5. Razón: hoy no se vende por Mercado Público; esos casos
+   irán a un cotizador editable futuro. RIESGO ACTIVO REGISTRADO: si se reactiva el canal 50000
+   (Mercado Público, 7 clientes) o cualquier canal sin lista propia, esas cotizaciones saldrán a
+   precio Santa Rosa en silencio, sin aviso al vendedor. Revisar ANTES de reactivar ese canal o
+   al llegar a F6.
+
+4. MARGEN EMPRESA — CERRADO. `margen_piso_40000` NO existe y NO se creará. Empresa usa el piso
+   global 30% (el RPC cae al global cuando no encuentra `margen_piso_<canal>`). Empresa NO tiene
+   colchón 20%. Consecuencia para F3: al bajar precios Empresa, el piso 30% bloqueará recortes
+   que antes se pensaban con piso 20%.
+
+5. F4 · SELECTOR DE CANAL AL CREAR CLIENTE — EN PRODUCCIÓN (PR #23, squash `fabb776`). Nuevo
+   selector "Canal / lista de precios" en el módulo 1-Cliente: Santa Rosa (10000, default) /
+   Empresa (40000), solo esos dos canales. El canal viaja en el INSERT de `obtenerClienteId()`
+   → el cliente nuevo nace con el canal correcto (antes todos nacían 10000 por el DEFAULT). El
+   selector alimenta el precio en vivo (`canalDelCliente()`/`canalEfectivo()`) para que pantalla
+   y documento coincidan. Comportamiento del selector (función `desarmarSeleccionCliente`):
+   · Elegir cliente existente del desplegable → el selector salta a su canal real y se BLOQUEA
+     (`disabled`). Reclasificar un cliente existente NO se hace por interfaz.
+   · Al desarmar la selección (editar nombre/RUT, vaciar el buscador) → el selector SIEMPRE
+     vuelve a Santa Rosa (10000) y queda editable.
+   · Borrado de los datos del cliente al desarmar es CONDICIONAL, señal = `clienteSelId` leída
+     ANTES de anularla: si venía de cliente ANTIGUO (`clienteSelId` tenía id) se limpia TODO el
+     bloque (RUT, contacto, tel, correo, dir, comuna, obs) para no arrastrar datos del cliente
+     viejo; si es cliente NUEVO en curso (`clienteSelId` null) NO se borra nada. `exceptoId`
+     excluye el campo que se está tecleando (caso `#rut`, para no autoborrarlo).
+   RECLASIFICAR el canal de un cliente existente = por SQL admin puntual (Opción 1 elegida), NO
+   hay botón de edición en interfaz. La RLS de `clientes` es abierta (un vendedor podría editar
+   por API), NO se endureció porque no hay botón que lo invite — si a futuro se agrega edición
+   de canal por interfaz, exige endurecer la RLS de `clientes`. Verificado en base: cliente
+   creado Empresa → `canal_codigo` 40000; Santa Rosa → 10000; DEFAULT de la tabla intacto (10000).
+
+6. RIESGO PARA FRENTE FUTURO (destapado en la prueba F4, PREEXISTENTE, no urgente): RUT
+   DUPLICADO — hoy nada impide crear dos clientes con el mismo RUT. `obtenerClienteId()`
+   reutiliza en silencio el primer cliente que encuentre con ese RUT. No hay constraint de
+   unicidad ni validación bloqueante (el check de RUT es solo informativo). Candidato para el
+   frente de anular/editar o uno de validación de clientes.
+
+7. FRENTES FUERA DE ESTE: anular / editar / versionar cotización → frente propio, post-reset
+   (chat aparte). Terminaciones → sin cambios (el dueño confirmó que no requieren ajustes).
 
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
@@ -232,10 +287,11 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 - Auto-completado de datos de cliente al generar OT: rellenar en la ficha los campos vacíos con lo que el vendedor escribe. POSPUESTO hasta que exista el editor de fichas (para poder corregir errores). Requiere escritura a la tabla clientes.
 - Bug conocido (no bug real): la OT muestra en blanco los campos de contacto que estén vacíos en la ficha del cliente. Es el comportamiento correcto mientras no exista el editor de fichas.
 - Colchón de hora de producción en la OT: mostrar hora de entrega al cliente + "listo en producción" una hora antes (colchón parametrizable). Decidido mostrar ambas horas, no restar oculto. Pendiente de implementar.
-- Bug preexistente en `filtrarClientes()` (index.html): la rama "sin coincidencias" resetea `clienteSelId=null` mientras el vendedor sigue tipeando una búsqueda parcial que aún no matchea nada, incluso si no llega a confirmar la selección nueva. Detectado en la revisión de UI Cliente (agosto 2026), no corrige datos guardados, no resuelto.
+- `filtrarClientes()` (index.html): la rama "sin coincidencias" desarma la selección (`clienteSelId=null`) mientras el vendedor tipea una búsqueda parcial que aún no matchea. Reelaborado en F4 (PR #23): ahora llama `desarmarSeleccionCliente()`, que además limpia el bloque del cliente SOLO si venía de un cliente antiguo. No corrige datos ya guardados. Comportamiento aceptado por el dueño.
 - Vista de Orden de Trabajo (index.html ~línea 1539): el campo "Dirección" ahí viene de `d.cliente.direccion` (de la base), no del formulario — no se tocó al agregar Comuna en agosto 2026. Evaluar si conviene sumar comuna también ahí.
-- Canal 50000 (Mercado Público) — RIESGO DE PRECIO ABIERTO: los 7 clientes de este canal SÍ son cotizables hoy, pero por el fallback caen a precio Santa Rosa (mesón) sin ningún aviso. Precio incorrecto para licitación pública. Mientras no exista lista de precios propia del canal 50000 (F6), cotizar a estos clientes da un precio que no corresponde y nadie lo nota. Mitigación temporal a evaluar: no cotizarlos por el sistema, o crear su lista antes de usarlos.
+- Canal 50000 (Mercado Público) — RIESGO DE PRECIO ABIERTO (registrado, decisión firme de dejar el fallback como está — ver punto 3 del frente MOTOR/RLS/PERFILES): los 7 clientes de este canal SÍ son cotizables hoy, pero por el fallback caen a precio Santa Rosa (mesón) sin ningún aviso. Precio incorrecto para licitación pública. Mientras no exista lista de precios propia del canal 50000 (F6), cotizar a estos clientes da un precio que no corresponde y nadie lo nota. Revisar ANTES de reactivar el canal o al llegar a F6.
 - Normalización de RUT: hoy se ingresa con formato libre. Falta decidir un formato único, aplicar limpieza en el frontend + validación en servidor, y migrar los RUT ya guardados en la base a ese formato.
+- RUT DUPLICADO (preexistente, destapado en la prueba F4): nada impide crear dos clientes con el mismo RUT; `obtenerClienteId()` reutiliza en silencio el primero que encuentre. Sin constraint de unicidad ni validación bloqueante (el check de RUT es solo informativo). Va con el frente de anular/editar o uno de validación de clientes. No urgente.
 
 ## Notas operativas
 - El dueño opera GitHub por web UI y ahora también por Code. No sabe git a nivel comandos: explicarle en lenguaje simple.
@@ -254,6 +310,6 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 - Solo se crea lista Empresa por ahora; otros canales se agregan después sin tocar el motor.
 - El índice único (producto_id, lista_precio_id, incluye_diseno) YA existe en producto_precios.
 - Piso de margen por canal: mecanismo implementado con fallback al global 30; la clave `margen_piso_40000` NO se siembra — F3 (agosto 2026) cerró en margen piso único de 30% para todos los canales, se descartó diferenciar Empresa.
-- Resolución de lista de precios (verificado en el código de `guardar_cotizacion`): 1) si el canal del cliente no tiene fila propia en `listas_precio`, cae automáticamente a Santa Rosa (lista 1, canal 10000) — sin error, opción A. 2) Con la lista ya resuelta (propia o fallback), si un producto puntual no tiene precio en esa lista, recién ahí se lanza excepción explícita (D5).
+- Resolución de lista de precios (verificado en el código de `guardar_cotizacion`): 1) si el canal del cliente no tiene fila propia en `listas_precio`, cae automáticamente a Santa Rosa (lista 1, canal 10000) — sin error, opción A. 2) Con la lista ya resuelta (propia o fallback), si un producto puntual no tiene precio en esa lista, recién ahí se lanza excepción explícita (D5). DECISIÓN FIRME (2026-09-08, frente MOTOR/RLS/PERFILES): se MANTIENE la opción A, se descartó la opción B (excepción explícita del D5) — con el riesgo registrado del canal 50000.
 - Mínimo de cotización Empresa $10.000: rechaza a no-admin, admin exento, sobre el neto post-descuento.
 - Frontend Empresa: INDEX ÚNICO (no archivo separado).
