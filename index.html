@@ -720,23 +720,29 @@ function seleccionarCliente(id){
 }
 
 /* F4 · canal-cliente: desarmar la selección de cliente para volver a "cliente nuevo".
-   Decisión firme: al dejar de tener un cliente seleccionado (editar razón social o RUT,
-   vaciar el buscador) se limpia TODO el bloque del módulo 1 — los clientes existentes no
-   se editan desde el cotizador, se usan tal cual o se crea uno nuevo desde cero. El
-   selector de canal vuelve a Santa Rosa (10000) y queda editable; el vendedor que quiera
-   Empresa lo elige al final, sobre el cliente ya escrito.
-   exceptoId: id del campo que se está tecleando en ese momento — se excluye del borrado
-   para no autoborrar lo que el usuario escribe (caso #rut). razon/cliBuscar no están en
-   la lista: los sincroniza su propio handler. */
+   - El selector de canal SIEMPRE vuelve a Santa Rosa (10000) y queda editable.
+   - El borrado de los datos del cliente (RUT/contacto/tel/correo/dir/comuna/obs) es
+     CONDICIONAL: solo si los datos venían de un cliente ANTIGUO (seleccionado del
+     buscador → clienteSelId tenía id). Si es un cliente NUEVO en curso (clienteSelId
+     null) no se borra nada — el vendedor corrige libremente lo que está escribiendo.
+   La señal es clienteSelId, leída ANTES de anularla. Único sitio que le pone un id no
+   nulo: seleccionarCliente(). Los llamadores invocan esta función mientras clienteSelId
+   todavía tiene el valor viejo (esta función es la primera en anularlo).
+   exceptoId: id del campo que se teclea en ese momento — se excluye del borrado para no
+   autoborrar lo escrito (caso #rut). razon/cliBuscar nunca en la lista: los sincroniza
+   su propio handler. */
 function desarmarSeleccionCliente(exceptoId){
+  const habiaClienteAntiguo = (clienteSelId != null);   // leer ANTES de anular
   clienteSelId = null;
   const cc=document.getElementById("canalCliente");
   if(cc){ cc.disabled = false; cc.value = "10000"; }
-  ["contacto","rut","tel","correo","dir","comuna","obsCli"].forEach(id=>{
-    if(id===exceptoId) return;
-    const el=document.getElementById(id); if(el) el.value="";
-  });
-  if(exceptoId!=="rut"){ const rh=document.getElementById("rutHint"); if(rh){ rh.textContent=""; rh.className="hint"; } }
+  if(habiaClienteAntiguo){
+    ["contacto","rut","tel","correo","dir","comuna","obsCli"].forEach(id=>{
+      if(id===exceptoId) return;
+      const el=document.getElementById(id); if(el) el.value="";
+    });
+    if(exceptoId!=="rut"){ const rh=document.getElementById("rutHint"); if(rh){ rh.textContent=""; rh.className="hint"; } }
+  }
 }
 
 /* Cierra la lista al hacer clic fuera */
