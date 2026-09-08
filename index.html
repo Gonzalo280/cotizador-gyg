@@ -256,6 +256,12 @@
           <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="capInput(this); render()"></div>
           <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut(); render()"><div id="rutHint" class="hint"></div></div>
         </div>
+        <div class="field"><label>Canal / lista de precios</label>
+          <select id="canalCliente" onchange="render()">
+            <option value="10000" selected>Santa Rosa (mesón)</option>
+            <option value="40000">Empresa</option>
+          </select>
+        </div>
         <div class="grid2">
           <div class="field"><label>Teléfono</label><input id="tel" autocomplete="off" placeholder="+56 9 ..."></div>
           <div class="field"><label>Correo</label><input id="correo" autocomplete="off" type="email" placeholder="cliente@correo.cl"></div>
@@ -590,9 +596,13 @@ async function cargarCatalogo(){
 /* ---------- F2: CANAL (motor canal-consciente ya vive en el servidor; esto es solo presentación) ---------- */
 let canalOverride = null;   // solo admin; código de canal forzado, o null = automático
 
-// Canal del cliente elegido (10000 si no hay cliente seleccionado — igual que el servidor)
+// Canal del cliente elegido. Si hay uno del desplegable, manda el suyo (guardado).
+// Si NO (cliente nuevo en construcción), lee el selector del módulo 1 — F4 · canal-cliente.
 function canalDelCliente(){
-  if(!clienteSelId) return 10000;
+  if(!clienteSelId){
+    const sel = document.getElementById("canalCliente");
+    return sel ? (Number(sel.value) || 10000) : 10000;
+  }
   const c = CLIENTES.find(x=>String(x.id)===String(clienteSelId));
   return (c && Number(c.canal_codigo)) || 10000;
 }
@@ -1119,7 +1129,10 @@ async function obtenerClienteId(){
     correo:          $("correo").value.trim() || null,
     direccion:       $("dir").value.trim() || null,
     comuna:          $("comuna").value.trim() || null,
-    observaciones:   $("obsCli").value.trim() || null
+    observaciones:   $("obsCli").value.trim() || null,
+    // F4 · canal-cliente: solo aplica a clientes nuevos (las dos salidas tempranas de
+    // arriba ya cubren cliente del desplegable y reutilización por RUT existente)
+    canal_codigo:    Number(document.getElementById("canalCliente").value) || 10000
   }).select("id").single();
   if(error) throw new Error("No se pudo guardar el cliente: " + error.message);
   return data.id;
@@ -1212,6 +1225,8 @@ function limpiarFormulario(){
   const ec=$("empCot"); if(ec) ec.value = (perfil&&perfil.empresa_default)||"GYG";
   const rh=$("rutHint"); if(rh) rh.textContent="";
   const cl=$("cliLista"); if(cl) cl.style.display="none";
+  // F4 · canal-cliente: el selector de canal vuelve a su default (Santa Rosa)
+  const cc=document.getElementById("canalCliente"); if(cc) cc.value = "10000";
   // F2: el override de canal no debe arrastrarse a la siguiente cotización
   canalOverride = null;
   const co=$("canalOverride"); if(co) co.value = "";
