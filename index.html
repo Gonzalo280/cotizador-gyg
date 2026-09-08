@@ -687,6 +687,9 @@ function mostrarListaClientes(){
 function filtrarClientes(){
   const q = _norm($("cliBuscar").value);
   const box = $("cliLista");
+  // F4 · canal-cliente: tipear en el buscador desarma la selección → vuelve a "cliente nuevo",
+  // el selector de canal se re-habilita (render() no corre desde este handler).
+  const cc=document.getElementById("canalCliente"); if(cc) cc.disabled = false;
   if(!q){ box.style.display="none"; clienteSelId=null; $("razon").value=$("cliBuscar").value; return; }
   const hits = _hitsClientes(q);
   if(!hits.length){
@@ -704,6 +707,10 @@ function seleccionarCliente(id){
   $("cliLista").style.display = "none";
   if(!c) return;
   clienteSelId = c.id;
+  // F4 · canal-cliente: cliente existente → el selector refleja su canal real y se bloquea
+  // (reclasificar un cliente ya guardado se hace por SQL admin, no desde esta pantalla).
+  const cc=document.getElementById("canalCliente");
+  if(cc){ cc.value = String(c.canal_codigo || 10000); cc.disabled = true; }
   $("cliBuscar").value = (c.razon_social||"") + (c.rut?" · "+c.rut:"");
   $("razon").value    = c.razon_social||"";
   $("contacto").value = c.nombre_contacto||"";
@@ -1041,6 +1048,9 @@ function filasHTML(it, p, tids){
 }
 
 function render(){
+  // F4 · canal-cliente: sin cliente del desplegable (nuevo / selección desarmada por el
+  // oninput de RUT o razón social) el selector de canal queda editable.
+  const _cc=document.getElementById("canalCliente"); if(_cc && !clienteSelId) _cc.disabled = false;
   aplicarListaActiva();   // F2: la lista de precios sigue al canal activo antes de pintar nada
   // B7: contador de ítems en el recuadro negro — cuenta LÍNEAS finales (1 por ítem simple,
   // N por ítem con multi-medida activa), igual que construirItemsPayload() y docCotHTML()
@@ -1225,8 +1235,8 @@ function limpiarFormulario(){
   const ec=$("empCot"); if(ec) ec.value = (perfil&&perfil.empresa_default)||"GYG";
   const rh=$("rutHint"); if(rh) rh.textContent="";
   const cl=$("cliLista"); if(cl) cl.style.display="none";
-  // F4 · canal-cliente: el selector de canal vuelve a su default (Santa Rosa)
-  const cc=document.getElementById("canalCliente"); if(cc) cc.value = "10000";
+  // F4 · canal-cliente: el selector de canal vuelve a su default (Santa Rosa) y editable
+  const cc=document.getElementById("canalCliente"); if(cc){ cc.value = "10000"; cc.disabled = false; }
   // F2: el override de canal no debe arrastrarse a la siguiente cotización
   canalOverride = null;
   const co=$("canalOverride"); if(co) co.value = "";
