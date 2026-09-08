@@ -251,10 +251,10 @@
           <div id="cliLista" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35)"></div>
           <div id="cliHint" class="hint"></div>
         </div>
-        <div class="field" style="display:none"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="capInput(this); clienteSelId=null; render()"></div>
+        <div class="field" style="display:none"><label>Razón social</label><input id="razon" autocomplete="off" placeholder="Empresa S.A." oninput="capInput(this); desarmarSeleccionCliente(); render()"></div>
         <div class="grid2">
           <div class="field"><label>Nombre contacto</label><input id="contacto" autocomplete="off" oninput="capInput(this); render()"></div>
-          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="clienteSelId=null; onRut(); render()"><div id="rutHint" class="hint"></div></div>
+          <div class="field"><label>RUT (razón social a facturar)</label><input id="rut" autocomplete="off" placeholder="76.123.456-7" oninput="desarmarSeleccionCliente(); onRut(); render()"><div id="rutHint" class="hint"></div></div>
         </div>
         <div class="field"><label>Canal / lista de precios</label>
           <select id="canalCliente" onchange="render()">
@@ -687,14 +687,11 @@ function mostrarListaClientes(){
 function filtrarClientes(){
   const q = _norm($("cliBuscar").value);
   const box = $("cliLista");
-  // F4 · canal-cliente: tipear en el buscador desarma la selección → vuelve a "cliente nuevo",
-  // el selector de canal se re-habilita (render() no corre desde este handler).
-  const cc=document.getElementById("canalCliente"); if(cc) cc.disabled = false;
-  if(!q){ box.style.display="none"; clienteSelId=null; $("razon").value=$("cliBuscar").value; return; }
+  if(!q){ box.style.display="none"; desarmarSeleccionCliente(); $("razon").value=$("cliBuscar").value; return; }
   const hits = _hitsClientes(q);
   if(!hits.length){
     _renderListaClientes(hits);
-    clienteSelId = null;
+    desarmarSeleccionCliente();
     $("razon").value = $("cliBuscar").value;
     return;
   }
@@ -720,6 +717,20 @@ function seleccionarCliente(id){
   $("dir").value      = c.direccion||"";
   $("comuna").value   = c.comuna||"";
   render();
+}
+
+/* F4 · canal-cliente: desarmar la selección de un cliente existente para volver a "cliente
+   nuevo". Re-habilita el selector de canal SIEMPRE, y solo lo devuelve a Santa Rosa (10000)
+   en la transición desde un cliente existente (cc.disabled venía en true). Si el vendedor
+   ya estaba en modo cliente nuevo y eligió "Empresa" a mano, no se le pisa. */
+function desarmarSeleccionCliente(){
+  clienteSelId = null;
+  const cc=document.getElementById("canalCliente");
+  if(cc){
+    const veniaBloqueado = cc.disabled;
+    cc.disabled = false;
+    if(veniaBloqueado) cc.value = "10000";
+  }
 }
 
 /* Cierra la lista al hacer clic fuera */
@@ -1048,9 +1059,6 @@ function filasHTML(it, p, tids){
 }
 
 function render(){
-  // F4 · canal-cliente: sin cliente del desplegable (nuevo / selección desarmada por el
-  // oninput de RUT o razón social) el selector de canal queda editable.
-  const _cc=document.getElementById("canalCliente"); if(_cc && !clienteSelId) _cc.disabled = false;
   aplicarListaActiva();   // F2: la lista de precios sigue al canal activo antes de pintar nada
   // B7: contador de ítems en el recuadro negro — cuenta LÍNEAS finales (1 por ítem simple,
   // N por ítem con multi-medida activa), igual que construirItemsPayload() y docCotHTML()
