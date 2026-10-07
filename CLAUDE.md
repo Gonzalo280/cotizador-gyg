@@ -48,7 +48,7 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
   Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
-clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos')
+clientes (canal_codigo default 10000, comuna text) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos'. Valores previstos para el canal Partner: 'Partner' (solo vista partner) e 'Interno' (santarosa y empresa, no partner). Se crean en el bloque 4 (siembra); el frontend los usa desde el bloque 5)
 producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna. Lista Empresa (id 2) es copia de Principal (id 1) salvo EXCEPCIONES puntuales confirmadas por el dueño (ver Estado actual, productos 20 y 42).
 producto_costos · listas_precio (columna canal_codigo, índice único — una lista por canal; hoy 2 filas: (1,'Principal',10000) y (2,'Empresa',40000)) · terminaciones (tipo fija|unidad; config jsonb con 'por_m2' bool + 'minimo' propio cuando aplica, ej. laminados, Sellado perimetral, Cuerda perimetral) · producto_terminaciones
 cotizaciones (columna canal_codigo NOT NULL default 10000; histórico previo quedó en 10000) · cotizacion_items (snapshots inmutables)
@@ -146,8 +146,9 @@ instrucción acotada del arquitecto):
   no abrir a todos).
 - Javier ve TODOS los clientes (se mantiene, NO se filtra la lista de clientes por canal).
 - Técnicos abiertos: `margen_piso_40000` no existe (Empresa usa el piso global 30%);
-  fallback silencioso a lista Santa Rosa en el RPC cuando el canal no tiene lista propia
-  (discrepa con la Decisión D5 del DOC-3); selector de canal al crear cliente; ajustes de
+  fallback silencioso a la lista Principal para canales sin lista: es DISEÑO para el canal
+  80000 (productos duplicados). Sigue siendo discrepancia con la Decisión D5 del DOC-3 para
+  otros canales sin lista (p. ej. 50000); selector de canal al crear cliente; ajustes de
   terminaciones; anular / editar cotización.
 
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
