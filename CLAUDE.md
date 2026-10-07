@@ -109,15 +109,39 @@ respaldo: 0 OT huérfanas de 61. El "a veces no se ve en historial" NO es pérdi
 es RLS. La política de `cotizaciones` es `(vendedor_id = auth.uid()) OR es_admin()` — cada
 vendedor ve SOLO sus cotizaciones en el historial; `ordenes_trabajo` en cambio tiene lectura
 abierta a todos, así que una OT puede aparecer en "Ver OTs" mientras su cotización no está en
-el historial del usuario que mira. Agrava: el dueño tiene DOS perfiles con el mismo nombre
-(`gonsalsa69@yahoo.es` admin ve todo / `gerenciagonzalo28@gmail.com` vendedor ve solo lo
-suyo). Comportamiento por diseño.
+el historial del usuario que mira. Agrava: el dueño tiene DOS cuentas
+(`gonsalsa69@yahoo.es` admin "Gonzalo Gutiérrez S." ve todo / `gerenciagonzalo28@gmail.com`
+vendedor "Luis Gonzalo Gutiérrez Solar" ve solo lo suyo). Comportamiento por diseño.
+
+BLOQUE 1 PARTNER (canal 80000) — EJECUTADO EN PRODUCCIÓN (2026-10-07, SQL de base de datos
+sin rama, protocolo PRE → confirmación → ejecución → POST, cambios aditivos):
+- Rol `partner` agregado al enum `rol_usuario` (admin, vendedor, partner). Ningún perfil lo usa aún.
+- `parametros`: `margen_piso_80000 = 25` y `minimo_cotizacion_80000 = 3000`.
+- `es_admin()` ahora exige `activo` (`... AND rol='admin' AND activo`). Un admin desactivado
+  pierde permisos de admin al instante. Respaldo de la versión anterior:
+  `sql/respaldos/es_admin_pre.sql`.
+- Trigger `trg_profiles_proteger` en `profiles` (función `profiles_proteger_columnas()`):
+  bloquea a un no-admin cambiar `rol`, `descuento_max`, `activo` y `vista_producto`. No aplica
+  cuando `auth.uid()` es NULL (dashboard, service_role, MCP).
+- Columna `updated_at` + trigger `set_updated_at()` en `productos`, `producto_precios` y
+  `producto_costos` (triggers `trg_upd_productos`, `trg_upd_precios`, `trg_upd_costos`). Las
+  filas existentes quedaron con la fecha del 2026-10-07, sin historial previo.
+
+MOTOR VERIFICADO (2026-10-07, solo lectura): `guardar_cotizacion` lee `margen_piso_<canal>`
+(fallback `margen_piso`) y `minimo_cotizacion_<canal>` de forma genérica, sin canales fijos
+en el código. Resuelve el canal así: override `canal_codigo` del payload SOLO si el perfil es
+admin; si no, relee `clientes.canal_codigo` desde la base por `cliente_id`; sin cliente cae a
+10000. Un no-admin no puede forzar el canal desde el navegador. El mínimo de cotización y el
+piso de margen rechazan a no-admin; el admin queda exento de ambos.
+
+CANAL 80000 (PARTNER) — DISEÑO: NO tiene lista de precios propia por diseño. Usa productos
+duplicados con `ver_en='Partner'` y cae a la lista `Principal` por el fallback del RPC. NO
+sugerir crear una lista 80000.
 
 DECISIONES TOMADAS, PENDIENTES DE EJECUTAR (chat de motor / RLS / perfiles — no ejecutar sin
 instrucción acotada del arquitecto):
-- Consolidar las cuentas del dueño: `gerenciagonzalo28` pasa a admin; `gonsalsa69` se
-  desactiva. El dueño reseteará OT y cotizaciones en unos días, así que la visibilidad de las
-  cotizaciones viejas de `gonsalsa69` no complica la migración.
+- Cuentas del dueño: las DOS se mantienen, NO se consolidan. `gonsalsa69` = "Gonzalo
+  Gutiérrez S." (admin); `gerenciagonzalo28` = "Luis Gonzalo Gutiérrez Solar" (vendedor).
 - Visibilidad de cotizaciones: se MANTIENE "cada vendedor ve solo las suyas" (decisión firme,
   no abrir a todos).
 - Javier ve TODOS los clientes (se mantiene, NO se filtra la lista de clientes por canal).
@@ -243,6 +267,11 @@ Los documentos de arquitectura completos (DOC 0 a DOC 5) los tiene el dueño y l
 - Error conocido en Excel histórico de costos: usa plancha 2.88 m²; el valor correcto es 1.22×2.44 = 2.9768 m². No propagarlo.
 - GOTCHA catálogo de terminaciones: vincular filas en `producto_terminaciones` NO alcanza para que se vean en el frontend. `productos.permite_terminaciones` es un prerrequisito aparte (booleano en `productos`, no en la tabla de relación) — si está en `false`, el ítem no muestra ninguna terminación aunque tenga 10 vinculadas. Verificar siempre las dos cosas juntas.
 - El MCP de Supabase (`mcp__supabase__*`) a veces no queda conectado al iniciar una sesión nueva de Claude Code aunque `.mcp.json` y `SUPABASE_ACCESS_TOKEN` estén bien — usar `/mcp` para reconectar antes de asumir que hay que reconfigurar algo.
+- GOTCHA MCP Supabase (token): el token de acceso debe ser Full access con Database READ-WRITE.
+  Un token Read conecta como `supabase_read_only_user` y da error 25006 "read-only
+  transaction". Verificar con `SELECT current_user, session_user;` (debe decir `postgres`).
+- PENDIENTE: fijar la versión de `@supabase/mcp-server-supabase` en `.mcp.json` en vez de
+  `@latest`.
 
 ## Decisiones del Paso 3 (cerradas)
 - El canal nace en la cotización y lo trae el CLIENTE (su canal_codigo), no el selector "Emitir por". "Emitir por" (GyG/GDG) solo define membrete y banco del documento.
