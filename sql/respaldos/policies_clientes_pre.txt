@@ -1,0 +1,6 @@
+-- Respaldo PRE de policies de public.clientes — capturado 2026-10-07 antes del Bloque 2.1 (Frente Partner 80000)
+-- ROLLBACK: DROP POLICY clientes_interno, clientes_partner ON public.clientes; luego ejecutar lo siguiente.
+CREATE POLICY "clientes: todos los usuarios activos" ON public.clientes
+  AS PERMISSIVE FOR ALL TO authenticated
+  USING (EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND p.activo)))
+  WITH CHECK (EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND p.activo)));

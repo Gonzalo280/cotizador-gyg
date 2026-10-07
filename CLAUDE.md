@@ -208,6 +208,28 @@ CANAL 80000 (PARTNER) — DISEÑO: NO tiene lista de precios propia por diseño.
 duplicados con `ver_en='Partner'` y cae a la lista `Principal` por el fallback del RPC. NO
 sugerir crear una lista 80000.
 
+BLOQUE 2 PARTNER EJECUTADO (2026-10-07, SQL de base de datos sin rama, protocolo PRE → confirmación →
+POST): policies de clientes/OT/pagos por rol; guardia rol partner en generar_ot, cambiar_estado_ot,
+registrar_pago_ot, detalle_ot. "Interno" = perfil activo con rol <> 'partner'.
+- `clientes`: la policy única "clientes: todos los usuarios activos" se reemplazó por `clientes_interno`
+  (internos ven/editan todo salvo canal 80000; solo el admin ve y crea canal 80000, `USING` y `WITH CHECK`
+  con `es_admin()`) y `clientes_partner` (el partner ve solo `created_by = auth.uid()` y solo crea con
+  canal 80000). Respaldo: `sql/respaldos/policies_clientes_pre.txt`. Conteo de clientes antes y después: 585.
+- `ordenes_trabajo.ot_read` y `ot_pagos.ot_pagos_read` (antes `true`): internos activos ven todo; el partner
+  solo las OT de sus cotizaciones (`cotizaciones.vendedor_id`); pagos vía `ot_pagos.ot_id`. Un perfil
+  inactivo que no sea vendedor de la cotización deja de leer OT y pagos. Respaldo:
+  `sql/respaldos/policies_ot_pre.txt`.
+- Guardia partner (`raise exception 'Operación no disponible para el rol partner'`) como primera
+  sentencia en `generar_ot`, `cambiar_estado_ot` y `registrar_pago_ot` (plpgsql). `detalle_ot` es
+  LANGUAGE sql: no se convirtió; llama primero a la función nueva `rechazar_si_partner()` (plpgsql,
+  STABLE, SECURITY DEFINER). Firma, SECURITY DEFINER y search_path de las cuatro quedaron intactos.
+  Respaldos: `sql/respaldos/<función>_pre.sql`.
+- Las policies se verificaron por lectura de `pg_policies`; NO se probaron con un perfil partner real
+  (no existe ninguno aún). Probar con un partner de prueba antes de habilitar el canal.
+- Hallazgo preexistente, NO corregido: `cambiar_estado_ot` y `registrar_pago_ot` (SECURITY DEFINER) no
+  verifican quién llama ni de quién es la OT; cualquier usuario autenticado no-partner puede cambiar el
+  estado (incluso a `anulada`) o registrar un pago en cualquier OT. Decidir si se endurece.
+
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
 ventas GDG 2025+2026) y 7 en 50000 (Mercado Público: municipalidades y CONAF). Se

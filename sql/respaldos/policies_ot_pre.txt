@@ -1,0 +1,7 @@
+-- Respaldo PRE de policies de ordenes_trabajo y ot_pagos — capturado 2026-10-07 antes del Bloque 2.2/2.3 (Frente Partner 80000)
+-- ROLLBACK 2.2:
+DROP POLICY IF EXISTS ot_read ON public.ordenes_trabajo;
+CREATE POLICY ot_read ON public.ordenes_trabajo FOR SELECT TO authenticated USING (true);
+-- ROLLBACK 2.3:
+DROP POLICY IF EXISTS ot_pagos_read ON public.ot_pagos;
+CREATE POLICY ot_pagos_read ON public.ot_pagos FOR SELECT TO authenticated USING (true);
