@@ -241,6 +241,27 @@ de menor id. Rollback: `DROP FUNCTION public.verificar_rut(text);`. NO probada f
 `postgres` `auth.uid()` es NULL y rechaza; se prueba con usuarios reales en el Bloque 6.
 - RUT duplicado detectado al normalizar: clientes id 62 (10000) e id 633 (40000); pendiente de depurar.
 
+BLOQUE 4a PARTNER EJECUTADO (2026-10-07, SQL de datos de producción sin rama, protocolo PRE → confirmación →
+POST por sub-bloque, fuera de horario): 63 productos duplicados con `ver_en='Partner'` (ids 89-151, nombre
+= origen + " — Partner"), con precio partner en las listas 1 y 2 (ambas variantes de diseño, 230 filas de
+precio), costo y terminaciones copiados del origen (115 filas de costo, 96 vínculos). El catálogo pasó de 87 a
+150 productos; `ver_en`: Ambos 87, Partner 63. Tabla `partner_siembra` = mapa origen→partner
+(`producto_id`, `precio_partner`, `partner_id`). Todos los márgenes partner sobre lista 1 sin diseño quedaron
+>= 28% (piso del canal 80000: 25%). Malla Mesh (id 38) pasó de 'Empresa' a 'Ambos'. Costo de id 75 (Adhesivo
+Normal P3 Impreso Mayorista) 3632 -> 4132 (margen 57,3% -> 51,4%).
+- Respaldos previos en tablas `respaldo_partner_productos` / `_producto_precios` / `_producto_costos` /
+  `_producto_terminaciones` (no borrar). Se activó RLS (sin policies: solo postgres/service_role) en esas 4,
+  en `partner_siembra` y en 4 respaldos viejos que estaban abiertos a `anon`: `respaldo_catalogo_f3_costos`,
+  `_nombres`, `_precios` y `respaldo_reclasif_canal_2026`.
+- Vista partner prevista: `ver_en IN ('Partner','Ambos')` (Despacho y Diseño en 'Ambos' a propósito). El admin
+  ve todo el catálogo (150 productos). Los productos partner heredan el `orden` del origen.
+- Snapshot del catálogo: `docs/catalogo-snapshot-2026-10-07.csv` (150 productos; precio lista 1 sin diseño y
+  costo sin diseño; en los " — Partner" el precio es el precio partner).
+- PENDIENTE 4b tras el Bloque 5: 15 productos a `ver_en='Interno'` (ids 77,76,59,35,75,58,56,55,73,51,52,53,54,48,44).
+- Rollback 4a: DELETE de `producto_terminaciones`, `producto_costos` y `producto_precios` de los `partner_id`;
+  DELETE de `productos` con `ver_en='Partner'`; `ver_en='Empresa'` en id 38; costo 3632 en id 75; DROP de
+  `partner_siembra`.
+
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
 ventas GDG 2025+2026) y 7 en 50000 (Mercado Público: municipalidades y CONAF). Se

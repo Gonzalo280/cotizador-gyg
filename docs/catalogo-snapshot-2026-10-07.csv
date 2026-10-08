@@ -1,0 +1,151 @@
+﻿id;producto;categoria;metodo;ver_en;precio_detalle_santa_rosa;costo;fuente
+1;Pendón tela PVC;Impresión Digital;m2;Ambos;15000;3670;catalogo
+3;Paloma Publicitaria;Armados;m2;Ambos;50000;13670;catalogo
+4;Stand publicitario;Armados;unidad;Ambos;130000;72063;catalogo
+5;Pendón Roller 90x200 1440 dpi;Dispositivos;unidad;Ambos;40000;23872;catalogo
+6;Flyer 1/4 carta 500u;Imprenta y Papelería;unidad;Ambos;25000;10220;catalogo
+7;Decoración Oficina Duster o empavonado;Impresión Digital;m2;Ambos;30000;15063;catalogo
+8;Flyer 1/2 carta 1000u;Imprenta y Papelería;unidad;Ambos;70000;27756;catalogo
+9;Pendón Roller 80x200 1440 dpi;Dispositivos;unidad;Ambos;35000;20014;catalogo
+10;Señalética (adh+foam o trovicel);Impresión Digital;m2;Ambos;80000;23603;catalogo
+11;Adhesivo Normal P3 Impreso;Impresión Digital;m2;Ambos;15000;5327;catalogo
+12;Flyer 1/2 carta 500u;Imprenta y Papelería;unidad;Ambos;40000;13878;catalogo
+13;Pendón Roller 100x200 1440 dpi;Dispositivos;unidad;Ambos;45000;22358;catalogo
+14;Flyer 1/4 carta 1000u;Imprenta y Papelería;unidad;Ambos;35000;13878;catalogo
+15;Empavonado;Impresión Digital;m2;Ambos;25000;13368;catalogo
+16;Roller 200 fondo prensa 720 dpi;Dispositivos;unidad;Ambos;252000;168000;catalogo
+17;Fotomural (adh muro P6);Impresión Digital;m2;Ambos;25000;7197;catalogo
+18;Adhesivo P3 Impreso + troquelado en oficio;Impresión Digital;m2;Ambos;25000;12327;catalogo
+19;Tarjetas de Presentación 300u;Imprenta y Papelería;unidad;Ambos;24000;9313;catalogo
+20;Tela PVC reverso negro;Impresión Digital;m2;Ambos;8000;4170;catalogo
+21;Gráfica Vehicular Parcial 1 m²;Gráfica Vehicular;unidad;Ambos;130000;70000;catalogo
+22;Bastidor Madera;Armados;m2;Ambos;25000;8987;catalogo
+23;Gigantografía;Impresión Digital;m2;Ambos;10000;3670;catalogo
+24;Flyer 1/4 carta 100u;Imprenta y Papelería;unidad;Ambos;15000;4669;catalogo
+25;Flyer 1/2 carta 300u;Imprenta y Papelería;unidad;Ambos;35000;11608;catalogo
+26;Roller 300 fondo prensa 720 dpi;Dispositivos;unidad;Ambos;352000;190000;catalogo
+27;Gráfica Vehicular Parcial 1/2 m²;Gráfica Vehicular;unidad;Ambos;90000;50000;catalogo
+28;Flyer 1/2 carta 100u;Imprenta y Papelería;unidad;Ambos;30000;6057;catalogo
+29;Ventanal Comercial (window visión -1mt2);Impresión Digital;m2;Ambos;30000;5194;catalogo
+30;Etiquetas Adhesivas;Impresión Digital;m2;Ambos;25000;12327;catalogo
+31;Decoración de Vitrinas Adhesivo P4;Impresión Digital;m2;Ambos;20000;5327;catalogo
+32;Gráfica Vehicular Parcial 2 m²;Gráfica Vehicular;unidad;Ambos;180000;110000;catalogo
+33;Tarjetas de Presentación 100u;Imprenta y Papelería;unidad;Ambos;10000;5413;catalogo
+34;Roller 250 fondo prensa 720 dpi;Dispositivos;unidad;Ambos;297000;180000;catalogo
+35;Paloma Publicitaria Mayorista;Armados;m2;Ambos;36000;11975;catalogo
+36;Microperforado (window visión);Impresión Digital;m2;Ambos;20000;5194;catalogo
+37;Flyer 1/4 carta 300u;Imprenta y Papelería;unidad;Ambos;18000;7486;catalogo
+38;Malla Mesh;Impresión Digital;m2;Ambos;7000;3967;catalogo
+39;Gráfica Vehicular avery sin memoria laminado;Gráfica Vehicular;m2;Ambos;70000;25747;catalogo
+40;Tarjetas de Presentación 500u;Imprenta y Papelería;unidad;Ambos;35000;11913;catalogo
+41;Tarjetas de Presentación 1000u;Imprenta y Papelería;unidad;Ambos;60000;20413;catalogo
+42;Gráfica Vehicular liso con memoria laminado;Gráfica Vehicular;m2;Ambos;50000;15000;catalogo
+43;PVC Impreso;Impresión Digital;m2;Ambos;12000;3670;catalogo
+44;DTF UV;Textil;m2;Ambos;100000;50000;catalogo
+45;Estampado 2 bajada;Textil;unidad;Ambos;1500;800;catalogo
+46;DTF Textil;Textil;m2;Ambos;40000;14000;catalogo
+47;Estampado 3 bajada;Textil;unidad;Ambos;2000;1050;catalogo
+48;DTF Textil empresas;Textil;m2;Ambos;25925;12000;catalogo
+49;Estampado 1 bajada;Textil;unidad;Ambos;1000;600;catalogo
+50;Estampado 4 bajada;Textil;unidad;Ambos;2500;1200;catalogo
+51;Instalación 1 persona 10:00 a 17:00 hrs;Instalación;unidad;Ambos;100000;70000;catalogo
+52;Instalación 2 personas 10:00 a 14:00 hrs;Instalación;unidad;Ambos;130000;90000;catalogo
+53;Instalación 2 personas 10:00 a 17:00 hrs;Instalación;unidad;Ambos;175000;120000;catalogo
+54;Instalación 3 personas 10:00 a 17:00 hrs;Instalación;unidad;Ambos;230000;160000;catalogo
+55;Instalación 1 persona 1 a 3 hrs;Instalación;unidad;Ambos;60000;40000;catalogo
+56;Pendón mayorista 2;Impresión Digital;m2;Ambos;5000;1974;catalogo
+57;Adh+Foam o Sintra sobre 2m²;Impresión Digital;m2;Ambos;60000;23603;catalogo
+58;Pendón mayorista 1;Impresión Digital;m2;Ambos;6000;3670;catalogo
+59;Bastidor de madera mayorista;Armados;m2;Ambos;18000;7292;catalogo
+60;Papel Sintético mate;Impresión Digital;m2;Ambos;20000;5948;catalogo
+61;Despacho 1;Servicios;unidad;Ambos;3000;2000;catalogo
+62;Despacho 2;Servicios;unidad;Ambos;5000;3000;catalogo
+63;Despacho 3;Servicios;unidad;Ambos;8900;6000;catalogo
+64;Diseño de stock reimpreso (5 min);Servicios;unidad;Ambos;2000;700;catalogo
+65;Diseño de stock nuevo (20 min);Servicios;unidad;Ambos;4000;2085;catalogo
+66;Creación diseño simple (30 min);Servicios;unidad;Ambos;6200;2311;catalogo
+67;Creación diseño complejo (60 min);Servicios;unidad;Ambos;10000;4622;catalogo
+68;Creación diseño logo simple (120 min);Servicios;unidad;Ambos;20000;9244;catalogo
+69;Creación diseño logo (180 min);Servicios;unidad;Ambos;30000;13866;catalogo
+70;Tela PVC monumental;Impresión Digital;m2;Ambos;8000;3670;catalogo
+71;Servicio laminado externo — volumen;Servicios;m2;Ambos;4500;2339;catalogo
+72;Servicio laminado externo — estándar;Servicios;m2;Ambos;5500;2339;catalogo
+73;Instalación 1 persona 1 hora;Instalación;unidad;Ambos;30000;20000;catalogo
+74;Tela PVC campaña elect.;Impresión Digital;m2;Ambos;3300;1607;catalogo
+75;Adhesivo Normal P3 Impreso Mayorista;Impresión Digital;m2;Ambos;8500;4132;catalogo
+76;Bastidor de fierro 20/30 en 1,5mm;Armados;m2;Ambos;44000;23000;catalogo
+77;Bastidor de fierro 20/20 en 1,5mm;Armados;m2;Ambos;34000;18000;catalogo
+78;Servicio plóter de corte — estándar;Servicios;m2;Ambos;17000;7000;catalogo
+79;Servicio plóter de corte — volumen;Servicios;m2;Ambos;11000;6000;catalogo
+80;Pendón Roller 100x200 720dpi (promocional);Dispositivos;unidad;Ambos;40000;19358;catalogo
+81;Pendón Roller 90x200 720dpi (promocional);Dispositivos;unidad;Ambos;35000;20872;catalogo
+82;Pendón Roller 80x200 720dpi (promocional);Dispositivos;unidad;Ambos;30000;17000;catalogo
+83;Panel Araña 4 cuerpos 300x230;Dispositivos;unidad;Ambos;204957;132230;catalogo
+84;Tela Display Araña 4 cuerpos 371x227;Dispositivos;unidad;Ambos;193642;124930;catalogo
+85;Panel Araña 3 cuerpos 225x230;Dispositivos;unidad;Ambos;141505;89560;catalogo
+86;Tela Display Araña 3 cuerpos 296x227;Dispositivos;unidad;Ambos;157479;99670;catalogo
+87;Panel Araña 2 cuerpos 150x230;Dispositivos;unidad;Ambos;106442;62613;catalogo
+88;Tela Display Araña 2 cuerpos 223x227;Dispositivos;unidad;Ambos;127653;75090;catalogo
+89;Pendón tela PVC — Partner;Impresión Digital;m2;Partner;5400;3670;partner_siembra (origen id 1)
+90;Microperforado (window visión) — Partner;Impresión Digital;m2;Partner;10000;5194;partner_siembra (origen id 36)
+91;Flyer 1/4 carta 1000u — Partner;Imprenta y Papelería;unidad;Partner;25000;13878;partner_siembra (origen id 14)
+92;Flyer 1/4 carta 500u — Partner;Imprenta y Papelería;unidad;Partner;18000;10220;partner_siembra (origen id 6)
+93;Flyer 1/2 carta 1000u — Partner;Imprenta y Papelería;unidad;Partner;52500;27756;partner_siembra (origen id 8)
+94;Flyer 1/2 carta 500u — Partner;Imprenta y Papelería;unidad;Partner;30000;13878;partner_siembra (origen id 12)
+95;Tarjetas de Presentación 300u — Partner;Imprenta y Papelería;unidad;Partner;17000;9313;partner_siembra (origen id 19)
+96;DTF Textil — Partner;Textil;m2;Partner;25925;14000;partner_siembra (origen id 46)
+97;Estampado 4 bajada — Partner;Textil;unidad;Partner;1900;1200;partner_siembra (origen id 50)
+98;Estampado 3 bajada — Partner;Textil;unidad;Partner;1500;1050;partner_siembra (origen id 47)
+99;Estampado 2 bajada — Partner;Textil;unidad;Partner;1200;800;partner_siembra (origen id 45)
+100;Estampado 1 bajada — Partner;Textil;unidad;Partner;900;600;partner_siembra (origen id 49)
+101;Servicio laminado externo — estándar — Partner;Servicios;m2;Partner;4200;2339;partner_siembra (origen id 72)
+102;Servicio laminado externo — volumen — Partner;Servicios;m2;Partner;3400;2339;partner_siembra (origen id 71)
+103;Pendón Roller 100x200 1440 dpi — Partner;Dispositivos;unidad;Partner;32900;22358;partner_siembra (origen id 13)
+104;Pendón Roller 90x200 1440 dpi — Partner;Dispositivos;unidad;Partner;33200;23872;partner_siembra (origen id 5)
+105;Pendón Roller 80x200 1440 dpi — Partner;Dispositivos;unidad;Partner;27800;20014;partner_siembra (origen id 9)
+106;Gráfica Vehicular Parcial 2 m² — Partner;Gráfica Vehicular;unidad;Partner;152800;110000;partner_siembra (origen id 32)
+107;Flyer 1/4 carta 100u — Partner;Imprenta y Papelería;unidad;Partner;10000;4669;partner_siembra (origen id 24)
+108;Flyer 1/2 carta 300u — Partner;Imprenta y Papelería;unidad;Partner;26300;11608;partner_siembra (origen id 25)
+109;Flyer 1/2 carta 100u — Partner;Imprenta y Papelería;unidad;Partner;22500;6057;partner_siembra (origen id 28)
+110;Stand publicitario — Partner;Armados;unidad;Partner;100100;72063;partner_siembra (origen id 4)
+111;Gráfica Vehicular Parcial 1 m² — Partner;Gráfica Vehicular;unidad;Partner;97300;70000;partner_siembra (origen id 21)
+112;Gráfica Vehicular Parcial 1/2 m² — Partner;Gráfica Vehicular;unidad;Partner;69500;50000;partner_siembra (origen id 27)
+113;PVC Impreso — Partner;Impresión Digital;m2;Partner;5400;3670;partner_siembra (origen id 43)
+114;Gigantografía — Partner;Impresión Digital;m2;Partner;5400;3670;partner_siembra (origen id 23)
+115;Tela PVC monumental — Partner;Impresión Digital;m2;Partner;5400;3670;partner_siembra (origen id 70)
+116;Paloma Publicitaria — Partner;Armados;m2;Partner;36000;13670;partner_siembra (origen id 3)
+117;Bastidor Madera — Partner;Armados;m2;Partner;18000;8987;partner_siembra (origen id 22)
+118;Etiquetas Adhesivas — Partner;Impresión Digital;m2;Partner;18000;12327;partner_siembra (origen id 30)
+119;Adhesivo P3 Impreso + troquelado en oficio — Partner;Impresión Digital;m2;Partner;18000;12327;partner_siembra (origen id 18)
+120;Adhesivo Normal P3 Impreso — Partner;Impresión Digital;m2;Partner;8000;5327;partner_siembra (origen id 11)
+121;Decoración de Vitrinas Adhesivo P4 — Partner;Impresión Digital;m2;Partner;10000;5327;partner_siembra (origen id 31)
+122;Fotomural (adh muro P6) — Partner;Impresión Digital;m2;Partner;15000;7197;partner_siembra (origen id 17)
+123;Ventanal Comercial (window visión -1mt2) — Partner;Impresión Digital;m2;Partner;22500;5194;partner_siembra (origen id 29)
+124;Decoración Oficina Duster o empavonado — Partner;Impresión Digital;m2;Partner;22000;15063;partner_siembra (origen id 7)
+125;Empavonado — Partner;Impresión Digital;m2;Partner;20000;13368;partner_siembra (origen id 15)
+126;Flyer 1/4 carta 300u — Partner;Imprenta y Papelería;unidad;Partner;13000;7486;partner_siembra (origen id 37)
+127;Señalética (adh+foam o trovicel) — Partner;Impresión Digital;m2;Partner;60000;23603;partner_siembra (origen id 10)
+128;Adh+Foam o Sintra sobre 2m² — Partner;Impresión Digital;m2;Partner;40000;23603;partner_siembra (origen id 57)
+129;Papel Sintético mate — Partner;Impresión Digital;m2;Partner;10000;5948;partner_siembra (origen id 60)
+130;Tela PVC reverso negro — Partner;Impresión Digital;m2;Partner;6500;4170;partner_siembra (origen id 20)
+131;Malla Mesh — Partner;Impresión Digital;m2;Partner;5600;3967;partner_siembra (origen id 38)
+132;Tarjetas de Presentación 1000u — Partner;Imprenta y Papelería;unidad;Partner;40000;20413;partner_siembra (origen id 41)
+133;Tarjetas de Presentación 500u — Partner;Imprenta y Papelería;unidad;Partner;25000;11913;partner_siembra (origen id 40)
+134;Tarjetas de Presentación 100u — Partner;Imprenta y Papelería;unidad;Partner;7600;5413;partner_siembra (origen id 33)
+135;Servicio plóter de corte — estándar — Partner;Servicios;m2;Partner;12800;7000;partner_siembra (origen id 78)
+136;Servicio plóter de corte — volumen — Partner;Servicios;m2;Partner;8400;6000;partner_siembra (origen id 79)
+137;Roller 300 fondo prensa 720 dpi — Partner;Dispositivos;unidad;Partner;263900;190000;partner_siembra (origen id 26)
+138;Roller 250 fondo prensa 720 dpi — Partner;Dispositivos;unidad;Partner;250000;180000;partner_siembra (origen id 34)
+139;Roller 200 fondo prensa 720 dpi — Partner;Dispositivos;unidad;Partner;233400;168000;partner_siembra (origen id 16)
+140;Pendón Roller 100x200 720dpi (promocional) — Partner;Dispositivos;unidad;Partner;30000;19358;partner_siembra (origen id 80)
+141;Pendón Roller 90x200 720dpi (promocional) — Partner;Dispositivos;unidad;Partner;29000;20872;partner_siembra (origen id 81)
+142;Pendón Roller 80x200 720dpi (promocional) — Partner;Dispositivos;unidad;Partner;23700;17000;partner_siembra (origen id 82)
+143;Panel Araña 4 cuerpos 300x230 — Partner;Dispositivos;unidad;Partner;183700;132230;partner_siembra (origen id 83)
+144;Tela Display Araña 4 cuerpos 371x227 — Partner;Dispositivos;unidad;Partner;173600;124930;partner_siembra (origen id 84)
+145;Panel Araña 3 cuerpos 225x230 — Partner;Dispositivos;unidad;Partner;124400;89560;partner_siembra (origen id 85)
+146;Tela Display Araña 3 cuerpos 296x227 — Partner;Dispositivos;unidad;Partner;138500;99670;partner_siembra (origen id 86)
+147;Panel Araña 2 cuerpos 150x230 — Partner;Dispositivos;unidad;Partner;87000;62613;partner_siembra (origen id 87)
+148;Tela Display Araña 2 cuerpos 223x227 — Partner;Dispositivos;unidad;Partner;104300;75090;partner_siembra (origen id 88)
+149;Gráfica Vehicular avery sin memoria laminado — Partner;Gráfica Vehicular;m2;Partner;45000;25747;partner_siembra (origen id 39)
+150;Gráfica Vehicular liso con memoria laminado — Partner;Gráfica Vehicular;m2;Partner;35000;15000;partner_siembra (origen id 42)
+151;Tela PVC campaña elect. — Partner;Impresión Digital;m2;Partner;2500;1607;partner_siembra (origen id 74)
