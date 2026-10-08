@@ -230,6 +230,17 @@ registrar_pago_ot, detalle_ot. "Interno" = perfil activo con rol <> 'partner'.
   verifican quién llama ni de quién es la OT; cualquier usuario autenticado no-partner puede cambiar el
   estado (incluso a `anulada`) o registrar un pago en cualquier OT. Decidir si se endurece.
 
+BLOQUE 3 PARTNER EJECUTADO (2026-10-07, SQL de base de datos sin rama, protocolo PRE → confirmación →
+POST): RPC `verificar_rut(p_rut)` → `{existe, canal, propio}`, SECURITY DEFINER, STABLE,
+`search_path=public`, EXECUTE solo para `authenticated` (revocado a `public` y a `anon`; los privilegios
+por defecto del proyecto le dan EXECUTE a `anon` a toda función nueva en `public`, por eso el REVOKE a
+`anon` es explícito). El frontend lo llama antes de crear cliente para avisar si el RUT ya existe, sin
+exponer datos del cliente. Compara RUT normalizado (se quitan todos los caracteres salvo dígitos y K,
+mayúscula). Con RUT repetido gana el creado por quien consulta (`created_by = auth.uid()`), luego el
+de menor id. Rollback: `DROP FUNCTION public.verificar_rut(text);`. NO probada funcionalmente: como
+`postgres` `auth.uid()` es NULL y rechaza; se prueba con usuarios reales en el Bloque 6.
+- RUT duplicado detectado al normalizar: clientes id 62 (10000) e id 633 (40000); pendiente de depurar.
+
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
 ventas GDG 2025+2026) y 7 en 50000 (Mercado Público: municipalidades y CONAF). Se
