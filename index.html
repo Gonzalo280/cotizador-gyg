@@ -1190,7 +1190,10 @@ async function obtenerClienteId(){
     // arriba ya cubren cliente del desplegable y reutilización por RUT existente)
     canal_codigo:    role==="partner" ? 80000 : (Number(document.getElementById("canalCliente").value) || 10000)
   }).select("id").single();
-  if(error) throw new Error("No se pudo guardar el cliente: " + error.message);
+  if(error){
+    if(error.code === "23505" || /clientes_rut_unico/.test(error.message || "")) throw new Error("Ese RUT ya está registrado.");
+    throw new Error("No se pudo guardar el cliente: " + error.message);
+  }
   return data.id;
 }
 
