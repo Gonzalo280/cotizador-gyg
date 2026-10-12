@@ -1165,8 +1165,15 @@ async function obtenerClienteId(){
   // Si eligió un cliente del desplegable y no editó razón social ni RUT, lo reutiliza
   if(clienteSelId) return clienteSelId;
   const rut = $("rut").value.trim();
-  // Si hay RUT y el cliente ya existe (entre los que puedes ver), lo reutiliza
   if(rut){
+    // Bloque 5 · verificar_rut: decide ANTES de insertar según quién es el dueño del RUT
+    const {data:v, error:errV} = await sb.rpc("verificar_rut", {p_rut: rut});
+    if(errV) throw new Error("No se pudo verificar el RUT: " + errV.message);
+    if(v && v.existe && !v.propio){
+      if(role==="partner") throw new Error("Este cliente ya está registrado en GyG. Consulta a gerencia antes de cotizar.");
+      if(role!=="admin" && Number(v.canal)===80000) throw new Error("Cliente registrado en el canal Partner (80000). Consulta a gerencia.");
+    }
+    // Si el RUT ya existe y no hay bloqueo: flujo actual, lo reutiliza (entre los que puedes ver)
     const {data} = await sb.from("clientes").select("id").eq("rut", rut).limit(1);
     if(data && data.length) return data[0].id;
   }
