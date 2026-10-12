@@ -588,8 +588,9 @@ async function cargarCatalogo(){
   Object.entries(CATALOGO)
     .sort((a,b)=> (a[1].orden - b[1].orden) || a[1].nombre.localeCompare(b[1].nombre, "es"))
     .filter(([k,p]) => role==='admin' ? true
-           : perfil.vista_producto==='empresa' ? (p.verEn==='Empresa'||p.verEn==='Ambos')
-           : (p.verEn==='Santa Rosa'||p.verEn==='Ambos'))
+           : perfil.vista_producto==='partner' ? (p.verEn==='Partner'||p.verEn==='Ambos')
+           : perfil.vista_producto==='empresa' ? (p.verEn==='Empresa'||p.verEn==='Ambos'||p.verEn==='Interno')
+           : (p.verEn==='Santa Rosa'||p.verEn==='Ambos'||p.verEn==='Interno'))
     .forEach(([k,p])=>{ const o=document.createElement("option"); o.value=k; o.textContent=p.nombre; sel.appendChild(o); });
 }
 
