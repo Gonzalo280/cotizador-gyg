@@ -37,7 +37,7 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
 ## Estado actual (septiembre 2026)
 - En producción: cotizador Santa Rosa completo + B7 (previsualización, numeración de ítems, columna Ítem en PDF, toggle de pago, bordes) + B8 (cabecera compacta, totales angostos, "Datos para transferencia", pie anclado al fondo, aviso de segunda hoja sobre 12 ítems) + módulo Empresa F2/F3 (ver Trabajo pendiente) + UI Cliente con Razón social/Comuna (PR #11) + F4 Bloque 1 multi-medida (PR #21) + F4 selector de canal al crear cliente (PR #23) + frente MOTOR/RLS/PERFILES cerrado (ver Trabajo pendiente).
 - Base de datos: catálogo de 8 categorías, ~146 precios en la única lista `Principal` (id 1), copiados a `Empresa` (id 2). 552 clientes reclasificados por canal: 442 en 10000 (Santa Rosa/mesón), 103 en 40000 (Empresa), 7 en 50000 (Mercado Público). Respaldo de la reclasificación en `respaldo_reclasif_canal_2026`.
-- Catálogo: 87 productos activos (74 → 87 tras el alta F4 del 2026-08-31, ver Trabajo pendiente). Los 37 productos m² activos tienen mínimo comercial de $5.000 neto, EXCEPCIÓN id 56 "Pendón mayorista 2" (mínimo $3.000, decisión del dueño 2026-08-31). F3 (agosto 2026) actualizó 52 costos a valores reales (venían de marzo), 2 precios Santa Rosa (id 20 y 42) y 8 nombres de producto. Costo único por producto, no varía por canal ni por diseño (el diseño se cobra como ítem aparte). Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`.
+- Catálogo: 150 productos activos = 87 originales + 63 Partner (ids 89-151, Bloque 4a del 2026-10-07, `ver_en='Partner'`). Los 87 originales vienen de 74 → 87 tras el alta F4 del 2026-08-31, ver Trabajo pendiente. Los productos m² activos (originales y Partner) tienen mínimo comercial de $5.000 neto; el Partner hereda el config del origen. EXCEPCIÓN id 56 "Pendón mayorista 2" (mínimo $3.000, decisión del dueño 2026-08-31). F3 (agosto 2026) actualizó 52 costos a valores reales (venían de marzo), 2 precios Santa Rosa (id 20 y 42) y 8 nombres de producto. Costo único por producto, no varía por canal ni por diseño (el diseño se cobra como ítem aparte). Respaldos: `respaldo_catalogo_f3_costos` / `_precios` / `_nombres`.
 - Perfiles: vendedores con nombre real (Roxana Gutiérrez S., Aranka Gutiérrez, Mario Yáñez). Cuentas susanbarczi@gmail.com, tai.gygimpresores y diseno.gygimpresores desactivadas (activo=false) hasta la etapa de producción. El dueño tiene DOS cuentas ACTIVAS con roles distintos: `gonsalsa69@yahoo.es` (uid `eec14dbd…`, ÚNICO admin, `descuento_max=100`, `profiles.nombre` = "Gonzalo Gutiérrez S." desde 2026-09-08) y `gerenciagonzalo28@gmail.com` (uid `9a1831d3…`, vendedor, tope 10, sigue como "Luis Gonzalo Gutiérrez Solar"). Gonzalo cotiza como `gonsalsa69` cuando necesita descuentos > 10%. NO se consolidaron ni desactivaron — ver frente MOTOR/RLS/PERFILES en Trabajo pendiente.
 - Infraestructura: Claude Code conectado a Supabase con permiso de ESCRITURA. Regla vigente: toda escritura sigue el ciclo PRE → confirmación explícita del dueño → ejecución → POST.
 - 9 canales de venta: 10000 Santa Rosa, 20000 Rrss, 30000 Campaña volumen (electoral), 40000 Empresa, 50000 Mercado Público, 60000 Ecommerce Google, 70000 Gonzalo, 80000 Partner, 90000 Mercado Libre.
@@ -48,7 +48,7 @@ El precio real, descuentos, margen y correlativo los determina el RPC `guardar_c
   Parámetro `minimo_cotizacion_40000 = 10000`.
 
 ## Tablas principales
-clientes (canal_codigo default 10000, comuna text — el canal se elige en el alta de cliente nuevo con el selector del módulo 1 y viaja en el INSERT de `obtenerClienteId()`; el default 10000 es solo respaldo. RLS abierta: cualquier perfil activo ve/edita todos los clientes, sin filtro por canal) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos'. Valores previstos para el canal Partner: 'Partner' (solo vista partner) e 'Interno' (santarosa y empresa, no partner). Se crean en el bloque 4 (siembra); el frontend los usa desde el bloque 5)
+clientes (canal_codigo default 10000, comuna text — el canal se elige en el alta de cliente nuevo con el selector del módulo 1 y viaja en el INSERT de `obtenerClienteId()`; el default 10000 es solo respaldo. RLS abierta: cualquier perfil activo ve/edita todos los clientes, sin filtro por canal) · productos (metodo m2|unidad, config jsonb con 'minimo', orden int sin unicidad, permite_terminaciones bool — PRERREQUISITO independiente de producto_terminaciones para que el frontend muestre la sección de terminaciones, ver_en text default 'Ambos' — filtro de visibilidad de catálogo por perfil, valores 'Santa Rosa'|'Empresa'|'Ambos'|'Partner'|'Interno'. 'Partner' = solo vista partner (63 productos desde el Bloque 4a); 'Interno' = vistas santarosa y empresa, no partner (ninguno hasta el 4b). El frontend los usa desde el Bloque 5, ver regla de filtro abajo)
 producto_precios (producto_id, lista_precio_id, incluye_diseno, precio) — índice único sobre esa terna. Lista Empresa (id 2) es copia de Principal (id 1) salvo EXCEPCIONES puntuales confirmadas por el dueño (ver Estado actual, productos 20 y 42).
 producto_costos · listas_precio (columna canal_codigo, índice único — una lista por canal; hoy 2 filas: (1,'Principal',10000) y (2,'Empresa',40000)) · terminaciones (tipo fija|unidad; config jsonb con 'por_m2' bool + 'minimo' propio cuando aplica, ej. laminados, Sellado perimetral, Cuerda perimetral) · producto_terminaciones
 cotizaciones (columna canal_codigo NOT NULL default 10000; histórico previo quedó en 10000) · cotizacion_items (snapshots inmutables)
@@ -261,6 +261,25 @@ Normal P3 Impreso Mayorista) 3632 -> 4132 (margen 57,3% -> 51,4%).
 - Rollback 4a: DELETE de `producto_terminaciones`, `producto_costos` y `producto_precios` de los `partner_id`;
   DELETE de `productos` con `ver_en='Partner'`; `ver_en='Empresa'` en id 38; costo 3632 en id 75; DROP de
   `partner_siembra`.
+
+BLOQUE 5 PARTNER EN PREVIEW (2026-10-12, rama `partner-80000`, frontend `index.html`, sin tocar base ni RPC;
+NO mergeado, pendiente de prueba del dueño en preview Vercel). Un commit por punto:
+- 5.1 Rol partner = no admin: el tope de descuento (`descuento_max`) aplica a todo rol distinto de `admin`
+  (`totals()` y `refreshSummary()`), ya no solo a `vendedor`.
+- 5.2 Filtro de catálogo por vista (`vista_producto`): admin → todo; `partner` → `ver_en` Partner|Ambos;
+  `empresa` → Empresa|Ambos|Interno; cualquier otro (santarosa) → Santa Rosa|Ambos|Interno.
+- 5.3 Reglas de pantalla solo para `role==='partner'` (admin y vendedor no cambian): (a) cliente obligatorio
+  al previsualizar (sin cliente el motor cae a canal 10000); (b) selector de canal oculto y `canal_codigo=80000`
+  forzado en el INSERT de cliente, `canalDelCliente()` devuelve 80000 sin cliente elegido; (c) ocultos el botón
+  de generar OT, el botón "Órdenes de trabajo" del encabezado (única puerta a la lista de OT y a pagos) y el botón
+  "Generar OT" del historial (si hay OT se muestra el número como texto); (d) con al menos un ítem de producto
+  `verEn==='Partner'` el descuento se fija en 0, se oculta el input y se muestra "Sin descuento sobre productos
+  Partner"; (e) PDF sin cambios. Pendiente v2: vista de estado de OT para partner.
+- 5.4 `verificar_rut` antes de crear cliente (todos los roles): si el RPC falla no se inserta. RUT existente no
+  propio: partner → bloqueo "Este cliente ya está registrado en GyG..."; no admin y canal 80000 → bloqueo "Cliente
+  registrado en el canal Partner (80000)..."; otros casos reutilizan por el SELECT por RUT exacto (que no
+  normaliza: RUT propio con otro formato cae al INSERT y lo ataja el 5.5).
+- 5.5 Error 23505 / `clientes_rut_unico` en el INSERT de cliente muestra "Ese RUT ya está registrado.".
 
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
