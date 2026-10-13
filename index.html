@@ -467,6 +467,19 @@ const SUPABASE_KEY = "sb_publishable_T7rXHTMp3OpOyzm6rYjZcg_3Xz9LKyZ";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// 5.7 · Sesión cruzada: supabase-js comparte la sesión por localStorage entre pestañas.
+// Si otra pestaña cambia de usuario, esta recarga para no mostrar uno y enviar el token de otro.
+let uidPestana = null;   // usuario con que se cargó ESTA pestaña (se fija al terminar cargarPerfil)
+sb.auth.onAuthStateChange((event, session) => {
+  if(!uidPestana) return;   // pestaña en login o recién abierta: nada que proteger
+  const cambio = (event === "SIGNED_OUT") ||
+                 ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session && session.user.id !== uidPestana);
+  if(!cambio) return;       // mismo usuario (refresco de token, etc.): no recargar
+  uidPestana = null;        // evita doble alerta
+  alert("La sesión cambió en otra pestaña. Se recargará la página.");
+  location.reload();
+});
+
 /* ---------- SESIÓN Y PERFIL ---------- */
 let perfil = null;   // {nombre, rol, descuento_max}
 
@@ -480,8 +493,10 @@ async function entrar(){
 }
 
 async function salir(){
+  uidPestana = null;   // 5.7: salida voluntaria, el SIGNED_OUT propio no debe recargar
   await sb.auth.signOut();
   perfil=null; role="vendedor"; canalOverride=null;
+  CLIENTES=[]; CATALOGO={}; items=[];   // 5.7: no dejar datos del usuario anterior en memoria
   $("login").style.display="grid"; $("userchip").style.display="none";
 }
 
@@ -518,6 +533,7 @@ async function cargarPerfil(){
   limpiarFormulario();   // B6: arrancar siempre con el formulario limpio
   // E1: empresa por defecto del perfil (ej. Javier emite GDG automáticamente)
   if(data.empresa_default && $("empCot")) $("empCot").value = data.empresa_default;
+  uidPestana = user.id;   // 5.7: recién ahora esta pestaña "tiene" usuario
 }
 
 // Al abrir: si hay sesión guardada, entra directo; si no, muestra el login
