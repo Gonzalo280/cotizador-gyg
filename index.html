@@ -340,6 +340,7 @@
         <label>Descuento (%) <span id="discCap"></span></label>
         <div class="di"><input id="disc" type="number" value="0" min="0" oninput="refreshSummary()"> <span style="font-family:var(--mono);font-size:13px" id="discMonto"></span></div>
       </div>
+      <div id="discPartnerNote" style="display:none;font-size:13px;color:var(--ink-soft);margin:6px 0">Sin descuento sobre productos Partner</div>
       <div id="marginBox"></div>
       <div class="act"><button class="btn block" id="btnGuardar" onclick="previsualizar('pdf')">Previsualizar y guardar PDF</button></div>
       <div class="act" style="margin-top:6px"><button class="btn block" id="btnGuardarOT" onclick="previsualizar('ot')" style="background:var(--accent-d)">Previsualizar y generar OT</button></div>
@@ -466,6 +467,19 @@ const SUPABASE_KEY = "sb_publishable_T7rXHTMp3OpOyzm6rYjZcg_3Xz9LKyZ";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// 5.7 · Sesión cruzada: supabase-js comparte la sesión por localStorage entre pestañas.
+// Si otra pestaña cambia de usuario, esta recarga para no mostrar uno y enviar el token de otro.
+let uidPestana = null;   // usuario con que se cargó ESTA pestaña (se fija al terminar cargarPerfil)
+sb.auth.onAuthStateChange((event, session) => {
+  if(!uidPestana) return;   // pestaña en login o recién abierta: nada que proteger
+  const cambio = (event === "SIGNED_OUT") ||
+                 ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session && session.user.id !== uidPestana);
+  if(!cambio) return;       // mismo usuario (refresco de token, etc.): no recargar
+  uidPestana = null;        // evita doble alerta
+  alert("La sesión cambió en otra pestaña. Se recargará la página.");
+  location.reload();
+});
+
 /* ---------- SESIÓN Y PERFIL ---------- */
 let perfil = null;   // {nombre, rol, descuento_max}
 
@@ -479,8 +493,10 @@ async function entrar(){
 }
 
 async function salir(){
+  uidPestana = null;   // 5.7: salida voluntaria, el SIGNED_OUT propio no debe recargar
   await sb.auth.signOut();
   perfil=null; role="vendedor"; canalOverride=null;
+  CLIENTES=[]; CATALOGO={}; items=[];   // 5.7: no dejar datos del usuario anterior en memoria
   $("login").style.display="grid"; $("userchip").style.display="none";
 }
 
@@ -508,9 +524,16 @@ async function cargarPerfil(){
   }else{
     $("canalOverrideWrap").style.display = "none";
   }
+  // Bloque 5 · partner: sin selector de canal ni acceso a OT/pagos (el canal se fuerza a 80000 al crear cliente)
+  const esPartnerUI = (role === "partner");
+  $("canalCliente").closest(".field").style.display = esPartnerUI ? "none" : "";
+  $("btnGuardarOT").style.display = esPartnerUI ? "none" : "";
+  $("btnOtGen").style.display = esPartnerUI ? "none" : "";
+  $("userchip").querySelector('button[onclick="verOTs()"]').style.display = esPartnerUI ? "none" : "";
   limpiarFormulario();   // B6: arrancar siempre con el formulario limpio
   // E1: empresa por defecto del perfil (ej. Javier emite GDG automáticamente)
   if(data.empresa_default && $("empCot")) $("empCot").value = data.empresa_default;
+  uidPestana = user.id;   // 5.7: recién ahora esta pestaña "tiene" usuario
 }
 
 // Al abrir: si hay sesión guardada, entra directo; si no, muestra el login
@@ -588,8 +611,9 @@ async function cargarCatalogo(){
   Object.entries(CATALOGO)
     .sort((a,b)=> (a[1].orden - b[1].orden) || a[1].nombre.localeCompare(b[1].nombre, "es"))
     .filter(([k,p]) => role==='admin' ? true
-           : perfil.vista_producto==='empresa' ? (p.verEn==='Empresa'||p.verEn==='Ambos')
-           : (p.verEn==='Santa Rosa'||p.verEn==='Ambos'))
+           : perfil.vista_producto==='partner' ? (p.verEn==='Partner'||p.verEn==='Ambos')
+           : perfil.vista_producto==='empresa' ? (p.verEn==='Empresa'||p.verEn==='Ambos'||p.verEn==='Interno')
+           : (p.verEn==='Santa Rosa'||p.verEn==='Ambos'||p.verEn==='Interno'))
     .forEach(([k,p])=>{ const o=document.createElement("option"); o.value=k; o.textContent=p.nombre; sel.appendChild(o); });
 }
 
@@ -600,12 +624,15 @@ let canalOverride = null;   // solo admin; código de canal forzado, o null = au
 // Si NO (cliente nuevo en construcción), lee el selector del módulo 1 — F4 · canal-cliente.
 function canalDelCliente(){
   if(!clienteSelId){
+    if(role==="partner") return 80000;   // Bloque 5 · partner: sus clientes nuevos nacen en canal Partner
     const sel = document.getElementById("canalCliente");
     return sel ? (Number(sel.value) || 10000) : 10000;
   }
   const c = CLIENTES.find(x=>String(x.id)===String(clienteSelId));
   return (c && Number(c.canal_codigo)) || 10000;
 }
+// Bloque 5 · partner: ¿hay algún ítem de producto Partner en la cotización?
+function hayItemPartner(){ return items.some(it => CATALOGO[it.key] && CATALOGO[it.key].verEn==='Partner'); }
 // Mismo orden de resolución que el RPC: override admin → canal del cliente → mesón
 function canalEfectivo(){
   if(role==="admin" && canalOverride) return Number(canalOverride);
@@ -971,7 +998,8 @@ function totals(){
   let netoBruto=0, costo=0;
   items.forEach(it=>{ const c=calcItem(it); netoBruto+=c.subtotal; costo+=c.costoTotal; });
   let d=Number($("disc").value)||0;
-  if(role==="vendedor") d=Math.min(d,TOPE_VEND);
+  if(role!=="admin") d=Math.min(d,TOPE_VEND);
+  if(role==="partner" && hayItemPartner()) d=0;   // Bloque 5: sin descuento sobre productos Partner
   const descMonto=netoBruto*d/100;
   const neto=netoBruto-descMonto;
   const iva=neto*IVA, total=neto+iva;
@@ -1111,8 +1139,15 @@ function refreshTotals(){
 }
 
 function refreshSummary(){
+  if(role==="partner"){   // Bloque 5 · partner: con productos Partner el descuento se fija en 0 y se oculta
+    const sinDesc = hayItemPartner();
+    if(sinDesc) $("disc").value = 0;
+    $("disc").closest(".discount").querySelector("label").style.display = sinDesc ? "none" : "";
+    $("disc").closest(".discount").querySelector(".di").style.display = sinDesc ? "none" : "";
+    $("discPartnerNote").style.display = sinDesc ? "block" : "none";
+  }
   const t=totals();
-  if(role==="vendedor"){
+  if(role!=="admin"){
     $("disc").max=TOPE_VEND;
     if(Number($("disc").value)>TOPE_VEND) $("disc").value=TOPE_VEND;
     $("discCap").textContent="· tope vendedor "+TOPE_VEND+"%";
@@ -1146,8 +1181,15 @@ async function obtenerClienteId(){
   // Si eligió un cliente del desplegable y no editó razón social ni RUT, lo reutiliza
   if(clienteSelId) return clienteSelId;
   const rut = $("rut").value.trim();
-  // Si hay RUT y el cliente ya existe (entre los que puedes ver), lo reutiliza
   if(rut){
+    // Bloque 5 · verificar_rut: decide ANTES de insertar según quién es el dueño del RUT
+    const {data:v, error:errV} = await sb.rpc("verificar_rut", {p_rut: rut});
+    if(errV) throw new Error("No se pudo verificar el RUT: " + errV.message);
+    if(v && v.existe && !v.propio){
+      if(role==="partner") throw new Error("Este cliente ya está registrado en GyG. Consulta a gerencia antes de cotizar.");
+      if(role!=="admin" && Number(v.canal)===80000) throw new Error("Cliente registrado en el canal Partner (80000). Consulta a gerencia.");
+    }
+    // Si el RUT ya existe y no hay bloqueo: flujo actual, lo reutiliza (entre los que puedes ver)
     const {data} = await sb.from("clientes").select("id").eq("rut", rut).limit(1);
     if(data && data.length) return data[0].id;
   }
@@ -1162,9 +1204,12 @@ async function obtenerClienteId(){
     observaciones:   $("obsCli").value.trim() || null,
     // F4 · canal-cliente: solo aplica a clientes nuevos (las dos salidas tempranas de
     // arriba ya cubren cliente del desplegable y reutilización por RUT existente)
-    canal_codigo:    Number(document.getElementById("canalCliente").value) || 10000
+    canal_codigo:    role==="partner" ? 80000 : (Number(document.getElementById("canalCliente").value) || 10000)
   }).select("id").single();
-  if(error) throw new Error("No se pudo guardar el cliente: " + error.message);
+  if(error){
+    if(error.code === "23505" || /clientes_rut_unico/.test(error.message || "")) throw new Error("Ese RUT ya está registrado.");
+    throw new Error("No se pudo guardar el cliente: " + error.message);
+  }
   return data.id;
 }
 
@@ -1310,7 +1355,9 @@ function pintarHist(data){
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft);text-align:right;font-family:var(--mono)">'+clp(c.total)+'</td>'+
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+c.estado+'</td>'+
       '<td style="padding:8px 4px;border-bottom:1px solid var(--line-soft)">'+
-        (c.ot_numero
+        (role==="partner"
+          ? (c.ot_numero||"")
+          : c.ot_numero
           ? '<button onclick="imprimirOT(\''+c.ot_numero+'\')">'+c.ot_numero+'</button>'
           : '<button onclick="abrirOtModal(\''+c.numero+'\','+c.total+','+(c.canal_codigo||10000)+')">Generar OT</button>')+
       '</td>'+
@@ -1424,6 +1471,7 @@ let PREV_MODO = null;
 
 function previsualizar(modo){
   if(!items.length){ alert("Agrega al menos un producto."); return; }
+  if(role==="partner" && !clienteSelId && !$("razon").value.trim()){ alert("Selecciona o crea un cliente antes de cotizar."); return; }
   if(!$("razon").value.trim()){ alert("Falta la razón social del cliente."); return; }
   PREV_MODO = modo;
   $("prevDoc").innerHTML = docCotHTML("BORRADOR · N° se asigna al guardar");
