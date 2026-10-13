@@ -262,8 +262,8 @@ Normal P3 Impreso Mayorista) 3632 -> 4132 (margen 57,3% -> 51,4%).
   DELETE de `productos` con `ver_en='Partner'`; `ver_en='Empresa'` en id 38; costo 3632 en id 75; DROP de
   `partner_siembra`.
 
-BLOQUE 5 PARTNER EN PREVIEW (2026-10-12, rama `partner-80000`, frontend `index.html`, sin tocar base ni RPC;
-NO mergeado, pendiente de prueba del dueño en preview Vercel). Un commit por punto:
+BLOQUE 5 PARTNER PROBADO 13-10-2026, PR ABIERTO (rama `partner-80000`, frontend `index.html`, sin tocar base ni
+RPC; PR a main pendiente de aprobación y merge del dueño). Un commit por punto:
 - 5.1 Rol partner = no admin: el tope de descuento (`descuento_max`) aplica a todo rol distinto de `admin`
   (`totals()` y `refreshSummary()`), ya no solo a `vendedor`.
 - 5.2 Filtro de catálogo por vista (`vista_producto`): admin → todo; `partner` → `ver_en` Partner|Ambos;
@@ -280,6 +280,9 @@ NO mergeado, pendiente de prueba del dueño en preview Vercel). Un commit por pu
   registrado en el canal Partner (80000)..."; otros casos reutilizan por el SELECT por RUT exacto (que no
   normaliza: RUT propio con otro formato cae al INSERT y lo ataja el 5.5).
 - 5.5 Error 23505 / `clientes_rut_unico` en el INSERT de cliente muestra "Ese RUT ya está registrado.".
+- 5.7 onAuthStateChange (commit d023d62): recarga la pestaña si cambia el usuario en otra; corrige bug de sesión
+  cruzada previo al partner. Mínimos: por cotización 80000 = $3.000 (rechaza); por ítem solo m² ($5.000); mínimo
+  por ítem en productos por unidad = pendiente motor.
 
 RECLASIFICACIÓN DE CANAL DE CLIENTES — COMPLETADA (agosto 2026): de los clientes
 importados, 442 quedaron en 10000 (mesón), 103 en 40000 (Empresa, según libro de
