@@ -257,10 +257,22 @@ Normal P3 Impreso Mayorista) 3632 -> 4132 (margen 57,3% -> 51,4%).
   ve todo el catálogo (150 productos). Los productos partner heredan el `orden` del origen.
 - Snapshot del catálogo: `docs/catalogo-snapshot-2026-10-07.csv` (150 productos; precio lista 1 sin diseño y
   costo sin diseño; en los " — Partner" el precio es el precio partner).
-- PENDIENTE 4b tras el Bloque 5: 15 productos a `ver_en='Interno'` (ids 77,76,59,35,75,58,56,55,73,51,52,53,54,48,44).
+- El 4b (15 productos a `ver_en='Interno'`) se ejecutó el 2026-10-13, ver más abajo.
 - Rollback 4a: DELETE de `producto_terminaciones`, `producto_costos` y `producto_precios` de los `partner_id`;
   DELETE de `productos` con `ver_en='Partner'`; `ver_en='Empresa'` en id 38; costo 3632 en id 75; DROP de
   `partner_siembra`.
+
+BLOQUE 4b PARTNER EJECUTADO 13-10-2026 (SQL de datos de producción sin rama, protocolo PRE → confirmación →
+POST por sub-bloque): 15 productos a `ver_en='Interno'` (ids 35,44,48,51,52,53,54,55,56,58,59,73,75,76,77);
+precio partner de Gigantografía, PVC Impreso, Pendón tela PVC y Tela PVC monumental = $5.000 (productos partner
+89, 113, 114, 115; 16 filas en `producto_precios` y 4 en `partner_siembra`; costo 3670, margen 26,6%, sobre el piso
+25% del canal); 9 cotizaciones de prueba eliminadas (COT-2026-0316, 0317, 0318, 0321, 0322, 0325, 0326, 0327, 0328;
+13 ítems; 0 OT; respaldo en `respaldo_prueba_cotizaciones` y `respaldo_prueba_cotizacion_items`, con RLS activa y
+sin policies; los correlativos NO se reutilizan, esos números quedan como huecos). El usuario `partner.prueba` y el
+cliente de prueba se mantienen para inducción de partners reales. Catálogo: 150 productos = 72 Ambos + 15 Interno
++ 63 Partner. La vista partner ve 135 (Partner + Ambos). Snapshot: `docs/catalogo-snapshot-2026-10-13.csv`.
+- Rollback 4b.1: `UPDATE productos SET ver_en='Ambos'` en los 15 ids. 4b.2: los mismos UPDATE con 5400. 4b.3:
+  INSERT ... SELECT desde las dos tablas de respaldo.
 
 BLOQUE 5 PARTNER PROBADO 13-10-2026, PR ABIERTO (rama `partner-80000`, frontend `index.html`, sin tocar base ni
 RPC; PR a main pendiente de aprobación y merge del dueño). Un commit por punto:
