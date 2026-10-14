@@ -274,8 +274,8 @@ cliente de prueba se mantienen para inducción de partners reales. Catálogo: 15
 - Rollback 4b.1: `UPDATE productos SET ver_en='Ambos'` en los 15 ids. 4b.2: los mismos UPDATE con 5400. 4b.3:
   INSERT ... SELECT desde las dos tablas de respaldo.
 
-BLOQUE 5 PARTNER PROBADO 13-10-2026, PR ABIERTO (rama `partner-80000`, frontend `index.html`, sin tocar base ni
-RPC; PR a main pendiente de aprobación y merge del dueño). Un commit por punto:
+BLOQUE 5 PARTNER EN PRODUCCIÓN (probado 13-10-2026, mergeado a main vía PR #29, squash `699c3e4`; rama
+`partner-80000`, frontend `index.html`, sin tocar base ni RPC). Un commit por punto en la rama:
 - 5.1 Rol partner = no admin: el tope de descuento (`descuento_max`) aplica a todo rol distinto de `admin`
   (`totals()` y `refreshSummary()`), ya no solo a `vendedor`.
 - 5.2 Filtro de catálogo por vista (`vista_producto`): admin → todo; `partner` → `ver_en` Partner|Ambos;
