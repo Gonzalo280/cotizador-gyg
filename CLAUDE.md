@@ -274,6 +274,14 @@ cliente de prueba se mantienen para inducción de partners reales. Catálogo: 15
 - Rollback 4b.1: `UPDATE productos SET ver_en='Ambos'` en los 15 ids. 4b.2: los mismos UPDATE con 5400. 4b.3:
   INSERT ... SELECT desde las dos tablas de respaldo.
 
+PARTNERS ACTIVOS (perfil `rol='partner'`, `vista_producto='partner'`, `descuento_max=20`, `activo=true`; alta por
+UPDATE de `profiles` sobre la fila creada por `handle_new_user`, con PRE → confirmación → POST):
+- Nelson Moyetones · nmoyetones@hotmail.com · alta 2026-10-19
+- Ramon Farias · rfarias.publicidad@gmail.com · alta 2026-10-19
+- Maria Teresa Valdivia · ma.teresavaldivia@gmail.com · alta 2026-10-19
+- Felipe Contreras · lu25ismania@gmail.com · alta 2026-10-19
+- Cuenta de inducción (no es un partner real): `partner.prueba@gygimpresores.cl` ("Partner Prueba", alta 2026-10-12).
+
 BLOQUE 5 PARTNER EN PRODUCCIÓN (probado 13-10-2026, mergeado a main vía PR #29, squash `699c3e4`; rama
 `partner-80000`, frontend `index.html`, sin tocar base ni RPC). Un commit por punto en la rama:
 - 5.1 Rol partner = no admin: el tope de descuento (`descuento_max`) aplica a todo rol distinto de `admin`
